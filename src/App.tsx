@@ -28,7 +28,7 @@ function App() {
         <input ref={imageRef} name="image" type="file" accept="image/*" />
         <button>Submit</button>
       </form>
-      <Canvas src={imgBuf} width={1280} height={720} />
+      <Canvas src={imgBuf} />
     </>
   );
 }

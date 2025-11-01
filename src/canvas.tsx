@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-interface CanvasProps extends React.CanvasHTMLAttributes<HTMLCanvasElement> {
+interface CanvasProps extends React.HTMLAttributes<HTMLDivElement> {
   src?: ArrayBuffer;
 }
 
@@ -13,7 +13,7 @@ const STROKE_STYLE = "black";
 const STROKE_WIDTH = 2;
 
 function renderImage(
-  ref: React.RefObject<HTMLCanvasElement | null>,
+  canvas: HTMLCanvasElement,
   ctx: CanvasRenderingContext2D,
   src: ArrayBuffer
 ) {
@@ -22,12 +22,10 @@ function renderImage(
 
   const img = new Image();
   img.onload = () => {
-    if (ref.current) {
-      ref.current.height = img.naturalHeight;
-      ref.current.width = img.naturalWidth;
-      ctx.clearRect(0, 0, ref.current.width, ref.current.height);
-      ctx.drawImage(img, 0, 0);
-    }
+    canvas.height = img.naturalHeight;
+    canvas.width = img.naturalWidth;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
     URL.revokeObjectURL(objectURL);
   };
   img.src = objectURL;
@@ -44,15 +42,17 @@ function drawLine(
   ctx.strokeStyle = STROKE_STYLE;
   ctx.lineWidth = STROKE_WIDTH;
   ctx.lineJoin = "round";
+  ctx.lineCap = "round";
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
-  ctx.closePath();
   ctx.stroke();
 }
 
 function Canvas({ src, ...props }: CanvasProps) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const imageCanvasRef = useRef<HTMLCanvasElement>(null);
+  const drawCanvasRef = useRef<HTMLCanvasElement>(null);
+  const drawCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const isDrawingRef = useRef(false);
   const drawOffsetRef = useRef<DrawOffset>({ x: 0, y: 0 });
@@ -62,60 +62,99 @@ function Canvas({ src, ...props }: CanvasProps) {
     ongoingTouches.findIndex((t) => t.identifier === id);
 
   useEffect(() => {
-    if (!ref.current) return;
-    const canvas = ref.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx || !src) return;
+    if (!imageCanvasRef.current || !drawCanvasRef.current || !src) return;
 
-    ctxRef.current = ctx;
-    renderImage(ref, ctx, src);
+    const imageCanvas = imageCanvasRef.current;
+    const drawCanvas = drawCanvasRef.current;
+    const imageCtx = imageCanvas.getContext("2d");
+    const drawCtx = drawCanvas.getContext("2d");
+
+    if (!imageCtx || !drawCtx) return;
+
+    drawCtxRef.current = drawCtx;
+
+    renderImage(imageCanvas, imageCtx, src);
+
+    const img = new Image();
+    const blob = new Blob([src]);
+    const objectURL = URL.createObjectURL(blob);
+    img.onload = () => {
+      drawCanvas.height = img.naturalHeight;
+      drawCanvas.width = img.naturalWidth;
+      URL.revokeObjectURL(objectURL);
+    };
+    img.src = objectURL;
 
     const handleMouseDown = (e: MouseEvent) => {
+      const rect = drawCanvas.getBoundingClientRect();
+      const scaleX = drawCanvas.width / rect.width;
+      const scaleY = drawCanvas.height / rect.height;
+
       isDrawingRef.current = true;
-      drawOffsetRef.current = { x: e.offsetX, y: e.offsetY };
+      drawOffsetRef.current = {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY,
+      };
     };
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDrawingRef.current || !ctxRef.current) return;
+      if (!isDrawingRef.current || !drawCtxRef.current) return;
+
+      const rect = drawCanvas.getBoundingClientRect();
+      const scaleX = drawCanvas.width / rect.width;
+      const scaleY = drawCanvas.height / rect.height;
+
       const prev = drawOffsetRef.current;
-      drawLine(ctxRef.current, prev.x, prev.y, e.offsetX, e.offsetY);
-      drawOffsetRef.current = { x: e.offsetX, y: e.offsetY };
+      const currentX = (e.clientX - rect.left) * scaleX;
+      const currentY = (e.clientY - rect.top) * scaleY;
+
+      drawLine(drawCtxRef.current, prev.x, prev.y, currentX, currentY);
+      drawOffsetRef.current = { x: currentX, y: currentY };
     };
 
     const handleMouseUp = (e: MouseEvent) => {
-      if (!isDrawingRef.current || !ctxRef.current) return;
+      if (!isDrawingRef.current || !drawCtxRef.current) return;
+
+      const rect = drawCanvas.getBoundingClientRect();
+      const scaleX = drawCanvas.width / rect.width;
+      const scaleY = drawCanvas.height / rect.height;
+
       const prev = drawOffsetRef.current;
-      drawLine(ctxRef.current, prev.x, prev.y, e.offsetX, e.offsetY);
+      const currentX = (e.clientX - rect.left) * scaleX;
+      const currentY = (e.clientY - rect.top) * scaleY;
+
+      drawLine(drawCtxRef.current, prev.x, prev.y, currentX, currentY);
       isDrawingRef.current = false;
       drawOffsetRef.current = { x: 0, y: 0 };
     };
 
-    // touch handlers
     const handleTouchStart = (e: TouchEvent) => {
       e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
       const touches = e.changedTouches;
       for (let i = 0; i < touches.length; i++) {
         setOngoingTouches((prev) => [...prev, touches[i]]);
       }
-      drawOffsetRef.current = { x: rect.left, y: rect.top };
     };
 
     const handleTouchMove = (e: TouchEvent) => {
       e.preventDefault();
-      if (!ctxRef.current) return;
-      const rect = canvas.getBoundingClientRect();
+      if (!drawCtxRef.current) return;
+
+      const rect = drawCanvas.getBoundingClientRect();
+      const scaleX = drawCanvas.width / rect.width;
+      const scaleY = drawCanvas.height / rect.height;
       const touches = e.changedTouches;
+
       for (let i = 0; i < touches.length; i++) {
         const idx = getOngoingTouchById(touches[i].identifier);
         if (idx >= 0) {
           const prev = ongoingTouches[idx];
           drawLine(
-            ctxRef.current,
-            prev.clientX - rect.left,
-            prev.clientY - rect.top,
-            touches[i].clientX - rect.left,
-            touches[i].clientY - rect.top
+            drawCtxRef.current,
+            (prev.clientX - rect.left) * scaleX,
+            (prev.clientY - rect.top) * scaleY,
+            (touches[i].clientX - rect.left) * scaleX,
+            (touches[i].clientY - rect.top) * scaleY
           );
           setOngoingTouches((prev) => {
             const updated = [...prev];
@@ -148,26 +187,52 @@ function Canvas({ src, ...props }: CanvasProps) {
       }
     };
 
-    canvas.addEventListener("mousedown", handleMouseDown);
-    canvas.addEventListener("mousemove", handleMouseMove);
-    canvas.addEventListener("mouseup", handleMouseUp);
-    canvas.addEventListener("touchstart", handleTouchStart);
-    canvas.addEventListener("touchmove", handleTouchMove);
-    canvas.addEventListener("touchend", handleTouchEnd);
-    canvas.addEventListener("touchcancel", handleTouchCancel);
+    drawCanvas.addEventListener("mousedown", handleMouseDown);
+    drawCanvas.addEventListener("mousemove", handleMouseMove);
+    drawCanvas.addEventListener("mouseup", handleMouseUp);
+    drawCanvas.addEventListener("touchstart", handleTouchStart);
+    drawCanvas.addEventListener("touchmove", handleTouchMove);
+    drawCanvas.addEventListener("touchend", handleTouchEnd);
+    drawCanvas.addEventListener("touchcancel", handleTouchCancel);
 
     return () => {
-      canvas.removeEventListener("mousedown", handleMouseDown);
-      canvas.removeEventListener("mousemove", handleMouseMove);
-      canvas.removeEventListener("mouseup", handleMouseUp);
-      canvas.removeEventListener("touchstart", handleTouchStart);
-      canvas.removeEventListener("touchmove", handleTouchMove);
-      canvas.removeEventListener("touchend", handleTouchEnd);
-      canvas.removeEventListener("touchcancel", handleTouchCancel);
+      drawCanvas.removeEventListener("mousedown", handleMouseDown);
+      drawCanvas.removeEventListener("mousemove", handleMouseMove);
+      drawCanvas.removeEventListener("mouseup", handleMouseUp);
+      drawCanvas.removeEventListener("touchstart", handleTouchStart);
+      drawCanvas.removeEventListener("touchmove", handleTouchMove);
+      drawCanvas.removeEventListener("touchend", handleTouchEnd);
+      drawCanvas.removeEventListener("touchcancel", handleTouchCancel);
     };
-  }, [src]);
+  }, [src, ongoingTouches]);
 
-  return <canvas ref={ref} {...props}></canvas>;
+  return (
+    <div
+      ref={containerRef}
+      style={{ position: "relative", display: "inline-block", lineHeight: 0 }}
+      {...props}
+    >
+      <canvas
+        ref={imageCanvasRef}
+        style={{
+          display: "block",
+          maxWidth: "100%",
+          height: "auto",
+        }}
+      />
+      <canvas
+        ref={drawCanvasRef}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          cursor: "crosshair",
+        }}
+      />
+    </div>
+  );
 }
 
 export default Canvas;
