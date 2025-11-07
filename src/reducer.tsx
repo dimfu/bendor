@@ -1,10 +1,11 @@
-import type { PSelection, State } from "./store";
+import { initialState, type PSelection, type State } from "./store";
 
 export enum ActionType {
   CreateNewLayer,
   SetPointsToLayer,
   SelectLayer,
   GetSelectedLayerPoint,
+  ClearSelections,
 }
 
 interface CreateNewLayer {
@@ -21,11 +22,19 @@ interface SelectLayer {
   payload: number;
 }
 
+interface ClearSelections {
+  type: ActionType.ClearSelections;
+}
+
 function isInBounds(arrLen: number, idx: number): boolean {
   return idx >= 0 && idx < arrLen;
 }
 
-export type Action = CreateNewLayer | SetPointsToLayer | SelectLayer;
+export type Action =
+  | CreateNewLayer
+  | SetPointsToLayer
+  | SelectLayer
+  | ClearSelections;
 
 const reducer = (state: State, action: Action): State => {
   switch (action.type) {
@@ -63,6 +72,10 @@ const reducer = (state: State, action: Action): State => {
         selectedSelectionIdx: idx,
         currentSelection: state.selections[idx],
       };
+
+    case ActionType.ClearSelections:
+      state = initialState;
+      return state;
 
     default:
       return state;

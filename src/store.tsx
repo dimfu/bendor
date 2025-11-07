@@ -19,7 +19,7 @@ export interface State {
   selectedSelectionIdx: number;
 }
 
-const initialState: State = {
+export const initialState: State = {
   selections: [],
   currentSelection: undefined,
   selectedSelectionIdx: -1,

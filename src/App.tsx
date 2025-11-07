@@ -1,10 +1,12 @@
 import { useRef, useState } from "react";
 import "./App.css";
 import Canvas from "./canvas";
-import { StoreProvider } from "./store";
 import Selections from "./components/selections";
+import { useStore } from "./store";
+import { ActionType } from "./reducer";
 
 function App() {
+  const { dispatch } = useStore();
   const [imgBuf, setImageBuf] = useState<ArrayBuffer>();
   const imageRef = useRef<HTMLInputElement>(null);
 
@@ -21,10 +23,11 @@ function App() {
       }
     };
     reader.readAsArrayBuffer(file);
+    dispatch({ type: ActionType.ClearSelections });
   };
 
   return (
-    <StoreProvider>
+    <>
       <input
         onChange={onImageChange}
         ref={imageRef}
@@ -36,7 +39,7 @@ function App() {
         <Selections />
         <Canvas src={imgBuf} />
       </div>
-    </StoreProvider>
+    </>
   );
 }
 
