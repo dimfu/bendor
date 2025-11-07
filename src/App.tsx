@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import "./App.css";
 import Canvas from "./canvas";
+import { StoreProvider } from "./store";
+import Selections from "./components/selections";
 
 function App() {
   const [imgBuf, setImageBuf] = useState<ArrayBuffer>();
@@ -23,13 +25,16 @@ function App() {
   };
 
   return (
-    <>
+    <StoreProvider>
       <form onSubmit={onSubmitForm}>
         <input ref={imageRef} name="image" type="file" accept="image/*" />
         <button>Submit</button>
       </form>
-      <Canvas src={imgBuf} />
-    </>
+      <div>
+        <Selections />
+        <Canvas src={imgBuf} />
+      </div>
+    </StoreProvider>
   );
 }
 
