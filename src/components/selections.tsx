@@ -1,5 +1,5 @@
+import { useStore } from "../hooks";
 import { ActionType } from "../reducer";
-import { useStore } from "../store";
 
 function Selections() {
   const { state, dispatch } = useStore();

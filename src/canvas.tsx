@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Point } from "./types";
-import { useStore } from "./store";
 import { ActionType } from "./reducer";
+import { useStore } from "./hooks";
 
 interface CanvasProps extends React.HTMLAttributes<HTMLDivElement> {
   src?: ArrayBuffer;
@@ -21,8 +21,9 @@ function Canvas({ src, ...props }: CanvasProps) {
   const selectedPixelsRef = useRef<Set<string>>(new Set());
 
   const [ongoingTouches, setOngoingTouches] = useState<Touch[]>([]);
-  const getOngoingTouchById = (id: number) =>
-    ongoingTouches.findIndex((t) => t.identifier === id);
+
+  const getOngoingTouchById = useCallback((id: number) =>
+    ongoingTouches.findIndex((t) => t.identifier === id), [ongoingTouches]);
 
   // https://codepen.io/cranes/pen/GvobwB (MASSIVE SHOUTOUT)
   const isPointInPolygon = (point: Point, polygon: Point[]): boolean => {
@@ -110,7 +111,7 @@ function Canvas({ src, ...props }: CanvasProps) {
     ctx.setLineDash([]);
   };
 
-  const selectPixels = (points: Point[]) => {
+  const selectPixels = useCallback((points: Point[]) => {
     if (!drawCanvasRef.current || points.length <= 1) return;
 
     const canvas = drawCanvasRef.current;
@@ -125,14 +126,14 @@ function Canvas({ src, ...props }: CanvasProps) {
         }
       }
     }
-  };
+  }, []);
 
-  const renderCanvas = (ctx: CanvasRenderingContext2D) => {
+  const renderCanvas = useCallback((ctx: CanvasRenderingContext2D) => {
     if (!drawCanvasRef.current) return;
     const canvas = drawCanvasRef.current;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     renderSelection(ctx, pointsRef.current, startPointRef.current);
-  };
+  }, []);
 
   useEffect(() => {
     if (!src || !imageCanvasRef.current || !drawCanvasRef.current) return;
@@ -169,7 +170,7 @@ function Canvas({ src, ...props }: CanvasProps) {
   }, [src]);
 
   useEffect(() => {
-    if (!imageCanvasRef.current || !drawCanvasRef.current || !src) return;
+    if (!drawCanvasRef.current) return;
     const drawCanvas = drawCanvasRef.current;
     const getCanvasCoordinates = (clientX: number, clientY: number) => {
       const rect = drawCanvas.getBoundingClientRect();
@@ -315,7 +316,7 @@ function Canvas({ src, ...props }: CanvasProps) {
       drawCanvas.removeEventListener("touchend", handleTouchEnd);
       drawCanvas.removeEventListener("touchcancel", handleTouchCancel);
     };
-  }, [ongoingTouches, state.selectedSelectionIdx]);
+  }, [ongoingTouches, state.selectedSelectionIdx, dispatch, getOngoingTouchById, renderCanvas, selectPixels]);
 
   useEffect(() => {
     // when user selects a layer, sync its points into refs
@@ -326,7 +327,7 @@ function Canvas({ src, ...props }: CanvasProps) {
 
     // now redraw the overlay
     renderCanvas(drawCtxRef.current);
-  }, [state.currentSelection]);
+  }, [state.currentSelection, renderCanvas]);
 
   return (
     <div

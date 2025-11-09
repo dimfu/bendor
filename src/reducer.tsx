@@ -1,4 +1,5 @@
-import { initialState, type PSelection, type State } from "./store";
+import { initialState } from "./misc";
+import type { PSelection, State } from "./types";
 
 export enum ActionType {
   CreateNewLayer,
@@ -38,7 +39,7 @@ export type Action =
 
 const reducer = (state: State, action: Action): State => {
   switch (action.type) {
-    case ActionType.CreateNewLayer:
+    case ActionType.CreateNewLayer: {
       const newLayer: PSelection = {
         points: [],
         start: { x: 0, y: 0 },
@@ -51,20 +52,22 @@ const reducer = (state: State, action: Action): State => {
         selectedSelectionIdx: nextIdx,
         currentSelection: nextSelections[nextIdx],
       };
+    }
 
-    case ActionType.SetPointsToLayer:
+    case ActionType.SetPointsToLayer: {
       if (!isInBounds(state.selections.length, state.selectedSelectionIdx))
         return state;
 
-      let updated = [...state.selections];
+      const updated = [...state.selections];
       updated[state.selectedSelectionIdx] = action.payload;
 
       return {
         ...state,
         selections: updated,
       };
+    }
 
-    case ActionType.SelectLayer:
+    case ActionType.SelectLayer: {
       const idx = action.payload;
       if (!isInBounds(state.selections.length, idx)) return { ...state };
       return {
@@ -72,6 +75,7 @@ const reducer = (state: State, action: Action): State => {
         selectedSelectionIdx: idx,
         currentSelection: state.selections[idx],
       };
+    }
 
     case ActionType.ClearSelections:
       state = initialState;

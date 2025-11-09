@@ -1,37 +1,10 @@
 import {
-  createContext,
-  useContext,
   useReducer,
-  type Dispatch,
   type ReactNode,
 } from "react";
-import type { Point } from "./types";
-import reducer, { type Action } from "./reducer";
-
-export interface PSelection {
-  points: Point[];
-  start: Point;
-}
-
-export interface State {
-  selections: PSelection[];
-  currentSelection?: PSelection;
-  selectedSelectionIdx: number;
-}
-
-export const initialState: State = {
-  selections: [],
-  currentSelection: undefined,
-  selectedSelectionIdx: -1,
-};
-
-const StoreContext = createContext<{
-  state: State;
-  dispatch: Dispatch<Action>;
-}>({
-  state: initialState,
-  dispatch: () => undefined,
-});
+import reducer from "./reducer";
+import { initialState } from "./misc";
+import { StoreContext } from "./context";
 
 export const StoreProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -42,4 +15,4 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useStore = () => useContext(StoreContext);
+

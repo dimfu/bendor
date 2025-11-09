@@ -2,8 +2,8 @@ import { useRef, useState } from "react";
 import "./App.css";
 import Canvas from "./canvas";
 import Selections from "./components/selections";
-import { useStore } from "./store";
 import { ActionType } from "./reducer";
+import { useStore } from "./hooks";
 
 function App() {
   const { dispatch } = useStore();
