@@ -1,18 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Point } from "./types";
+import type { ColorChannel, Point } from "./types";
 import { ActionType } from "./reducer";
 import { useStore } from "./hooks";
 
-interface CanvasProps extends React.HTMLAttributes<HTMLDivElement> {
-  src?: ArrayBuffer;
+function selectedPixelData(ctx: CanvasRenderingContext2D, selection?: Point[]): ColorChannel[] {
+  const channels: ColorChannel[] = []
+  // push every pixel from top left to bottom right if no selection
+  if (!selection || selection.length == 0) {
+    const data = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height).data
+    for (let i = 0; i < data.length; i += 4) {
+      channels.push(new Uint8Array([data[i], data[i + 1], data[i + 2], data[i + 3]]) as ColorChannel);
+    }
+  }
+  return channels
 }
 
-function Canvas({ src, ...props }: CanvasProps) {
+function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
   const { state, dispatch } = useStore();
 
+  const imgSrc = state.imgBuf;
+
   const imageCanvasRef = useRef<HTMLCanvasElement>(null);
-  const drawCanvasRef = useRef<HTMLCanvasElement>(null);
-  const drawCtxRef = useRef<CanvasRenderingContext2D | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const isDrawingRef = useRef(false);
@@ -84,11 +92,12 @@ function Canvas({ src, ...props }: CanvasProps) {
 
   const renderSelection = (
     ctx: CanvasRenderingContext2D,
+    element: HTMLCanvasElement,
     points: Point[],
     start: Point | null
   ) => {
     if (points.length <= 1 || !start) return;
-
+    ctx.clearRect(0, 0, element.width, element.height);
     ctx.setLineDash([5, 3]);
     ctx.strokeStyle = "black";
     ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
@@ -111,12 +120,9 @@ function Canvas({ src, ...props }: CanvasProps) {
     ctx.setLineDash([]);
   };
 
-  const selectPixels = useCallback((points: Point[]) => {
-    if (!drawCanvasRef.current || points.length <= 1) return;
-
-    const canvas = drawCanvasRef.current;
+  const selectPixels = useCallback((points: Point[], canvas: HTMLCanvasElement) => {
+    if (points.length <= 1) return;
     selectedPixelsRef.current.clear();
-
     // sample every 10th pixel instead of every pixel for perfomance boost :)
     const steps = 10;
     for (let x = 0; x < canvas.width; x += steps) {
@@ -128,26 +134,13 @@ function Canvas({ src, ...props }: CanvasProps) {
     }
   }, []);
 
-  const renderCanvas = useCallback((ctx: CanvasRenderingContext2D) => {
-    if (!drawCanvasRef.current) return;
-    const canvas = drawCanvasRef.current;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    renderSelection(ctx, pointsRef.current, startPointRef.current);
-  }, []);
-
   useEffect(() => {
-    if (!src || !imageCanvasRef.current || !drawCanvasRef.current) return;
-
+    if (!imgSrc || !imageCanvasRef.current) return;
     const imageCanvas = imageCanvasRef.current;
-    const drawCanvas = drawCanvasRef.current;
     const imageCtx = imageCanvas.getContext("2d");
-    const drawCtx = drawCanvas.getContext("2d");
-    if (!imageCtx || !drawCtx) return;
-
-    drawCtxRef.current = drawCtx;
-
+    if (!imageCtx) return;
     // load image
-    const blob = new Blob([src]);
+    const blob = new Blob([imgSrc]);
     const url = URL.createObjectURL(blob);
     const img = new Image();
 
@@ -155,179 +148,252 @@ function Canvas({ src, ...props }: CanvasProps) {
       // sizing (this clears both canvases)
       imageCanvas.width = img.naturalWidth;
       imageCanvas.height = img.naturalHeight;
-
-      drawCanvas.width = img.naturalWidth;
-      drawCanvas.height = img.naturalHeight;
-
       // draw base image
       imageCtx.clearRect(0, 0, imageCanvas.width, imageCanvas.height);
       imageCtx.drawImage(img, 0, 0);
-
       URL.revokeObjectURL(url);
     };
-
     img.src = url;
-  }, [src]);
+  }, [imgSrc]);
 
+  // To register mouse events to the drawing canvas
   useEffect(() => {
-    if (!drawCanvasRef.current) return;
-    const drawCanvas = drawCanvasRef.current;
-    const getCanvasCoordinates = (clientX: number, clientY: number) => {
-      const rect = drawCanvas.getBoundingClientRect();
-      const scaleX = drawCanvas.width / rect.width;
-      const scaleY = drawCanvas.height / rect.height;
-      return {
-        x: Math.round((clientX - rect.left) * scaleX),
-        y: Math.round((clientY - rect.top) * scaleY),
-      };
-    };
+    const container = containerRef.current;
+    if (!container) return;
 
-    const handleMouseDown = (e: MouseEvent) => {
-      // dont do anything unless there is layer selected
-      if (state.selectedSelectionIdx < 0) {
+    // use timeout to prevent from accessing the activeCanvas before it being created to the DOM
+    const timeout = setTimeout(() => {
+      const activeCanvas = container.querySelector<HTMLCanvasElement>(
+        `#drawing-canvas-${state.selectedSelectionIdx}`
+      );
+      if (!activeCanvas) return;
+
+      const drawingCanvasCtx = state.currentSelection?.ctx;
+      if (!drawingCanvasCtx) {
+        console.log("drawingCanvasCtx empty in register");
         return;
       }
-      isDrawingRef.current = true;
-      selectedPixelsRef.current.clear();
-      const point = getCanvasCoordinates(e.clientX, e.clientY);
-      startPointRef.current = point;
-      pointsRef.current = [point];
-      if (drawCtxRef.current) {
-        renderCanvas(drawCtxRef.current);
-      }
-    };
 
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDrawingRef.current || !drawCtxRef.current) return;
+      const getCanvasCoordinates = (clientX: number, clientY: number) => {
+        const rect = activeCanvas.getBoundingClientRect();
+        const scaleX = activeCanvas.width / rect.width;
+        const scaleY = activeCanvas.height / rect.height;
+        return {
+          x: Math.round((clientX - rect.left) * scaleX),
+          y: Math.round((clientY - rect.top) * scaleY),
+        };
+      };
 
-      const point = getCanvasCoordinates(e.clientX, e.clientY);
-      pointsRef.current.push(point);
-      renderCanvas(drawCtxRef.current);
-    };
-
-    const handleMouseUp = () => {
-      if (!isDrawingRef.current || !drawCtxRef.current) return;
-
-      isDrawingRef.current = false;
-      if (startPointRef.current) {
-        pointsRef.current.push(startPointRef.current);
-      }
-      selectPixels(pointsRef.current);
-      renderCanvas(drawCtxRef.current);
-
-      dispatch({
-        type: ActionType.SetPointsToLayer,
-        payload: { points: pointsRef.current, start: startPointRef.current! },
-      });
-
-      console.log(`Selected ${selectedPixelsRef.current.size} pixels`);
-    };
-
-    const handleTouchStart = (e: TouchEvent) => {
-      e.preventDefault();
-      const touches = e.changedTouches;
-      if (touches.length > 0) {
+      const handleMouseDown = (e: MouseEvent) => {
+        // dont do anything unless there is layer selected
+        if (state.selectedSelectionIdx < 0) {
+          return;
+        }
         isDrawingRef.current = true;
         selectedPixelsRef.current.clear();
-        const point = getCanvasCoordinates(
-          touches[0].clientX,
-          touches[0].clientY
-        );
-        startPointRef.current = point;
-        pointsRef.current = [point];
-        setOngoingTouches([touches[0]]);
-        if (drawCtxRef.current) {
-          renderCanvas(drawCtxRef.current);
+        const point = getCanvasCoordinates(e.clientX, e.clientY);
+        startPointRef.current = point; pointsRef.current = [point];
+        renderSelection(drawingCanvasCtx, activeCanvas, pointsRef.current, startPointRef.current);
+      };
+
+      const handleMouseMove = (e: MouseEvent) => {
+        if (!isDrawingRef.current) return;
+
+        const point = getCanvasCoordinates(e.clientX, e.clientY);
+        pointsRef.current.push(point);
+        renderSelection(drawingCanvasCtx, activeCanvas, pointsRef.current, startPointRef.current);
+      };
+
+      const handleMouseUp = () => {
+        if (!isDrawingRef.current) return;
+
+        isDrawingRef.current = false;
+        if (startPointRef.current) {
+          pointsRef.current.push(startPointRef.current);
         }
-      }
-    };
+        selectPixels(pointsRef.current, activeCanvas);
+        drawingCanvasCtx.clearRect(0, 0, activeCanvas.width, activeCanvas.height);
+        renderSelection(drawingCanvasCtx, activeCanvas, pointsRef.current, startPointRef.current);
 
-    const handleTouchMove = (e: TouchEvent) => {
-      e.preventDefault();
-      if (!isDrawingRef.current || !drawCtxRef.current) return;
+        dispatch({
+          type: ActionType.SetPointsToLayer,
+          payload: { points: pointsRef.current, start: startPointRef.current! },
+        });
 
-      const touches = e.changedTouches;
-      for (let i = 0; i < touches.length; i++) {
-        const idx = getOngoingTouchById(touches[i].identifier);
-        if (idx >= 0) {
+        // TODO: apply filter to selected points
+        console.log(selectedPixelData(drawingCanvasCtx, pointsRef.current))
+      };
+
+      const handleTouchStart = (e: TouchEvent) => {
+        e.preventDefault();
+        const touches = e.changedTouches;
+        if (touches.length > 0) {
+          isDrawingRef.current = true;
+          selectedPixelsRef.current.clear();
           const point = getCanvasCoordinates(
-            touches[i].clientX,
-            touches[i].clientY
+            touches[0].clientX,
+            touches[0].clientY
           );
-          pointsRef.current.push(point);
-          setOngoingTouches((prev) => {
-            const updated = [...prev];
-            updated.splice(idx, 1, touches[i]);
-            return updated;
-          });
+          startPointRef.current = point;
+          pointsRef.current = [point];
+          setOngoingTouches([touches[0]]);
+          renderSelection(drawingCanvasCtx, activeCanvas, pointsRef.current, startPointRef.current);
         }
-      }
-      renderCanvas(drawCtxRef.current);
-    };
+      };
 
-    const handleTouchEnd = (e: TouchEvent) => {
-      e.preventDefault();
-      if (!isDrawingRef.current || !drawCtxRef.current) return;
+      const handleTouchMove = (e: TouchEvent) => {
+        e.preventDefault();
+        if (!isDrawingRef.current) return;
 
-      const touches = e.changedTouches;
-      for (let i = 0; i < touches.length; i++) {
-        const idx = getOngoingTouchById(touches[i].identifier);
-        if (idx >= 0) {
-          setOngoingTouches((prev) => prev.filter((_, j) => j !== idx));
+        const touches = e.changedTouches;
+        for (let i = 0; i < touches.length; i++) {
+          const idx = getOngoingTouchById(touches[i].identifier);
+          if (idx >= 0) {
+            const point = getCanvasCoordinates(
+              touches[i].clientX,
+              touches[i].clientY
+            );
+            pointsRef.current.push(point);
+            setOngoingTouches((prev) => {
+              const updated = [...prev];
+              updated.splice(idx, 1, touches[i]);
+              return updated;
+            });
+          }
         }
-      }
+        renderSelection(drawingCanvasCtx, activeCanvas, pointsRef.current, startPointRef.current);
+      };
 
-      isDrawingRef.current = false;
-      if (startPointRef.current) {
-        pointsRef.current.push(startPointRef.current);
-      }
-      selectPixels(pointsRef.current);
-      renderCanvas(drawCtxRef.current);
+      const handleTouchEnd = (e: TouchEvent) => {
+        e.preventDefault();
+        if (!isDrawingRef.current) return;
 
-      console.log(`Selected ${selectedPixelsRef.current.size} pixels`);
-    };
-
-    const handleTouchCancel = (e: TouchEvent) => {
-      e.preventDefault();
-      const touches = e.changedTouches;
-      for (let i = 0; i < touches.length; i++) {
-        const idx = getOngoingTouchById(touches[i].identifier);
-        if (idx >= 0) {
-          setOngoingTouches((prev) => prev.filter((_, j) => j !== idx));
+        const touches = e.changedTouches;
+        for (let i = 0; i < touches.length; i++) {
+          const idx = getOngoingTouchById(touches[i].identifier);
+          if (idx >= 0) {
+            setOngoingTouches((prev) => prev.filter((_, j) => j !== idx));
+          }
         }
-      }
-      isDrawingRef.current = false;
-    };
 
-    drawCanvas.addEventListener("mousedown", handleMouseDown);
-    drawCanvas.addEventListener("mousemove", handleMouseMove);
-    drawCanvas.addEventListener("mouseup", handleMouseUp);
-    drawCanvas.addEventListener("touchstart", handleTouchStart);
-    drawCanvas.addEventListener("touchmove", handleTouchMove);
-    drawCanvas.addEventListener("touchend", handleTouchEnd);
-    drawCanvas.addEventListener("touchcancel", handleTouchCancel);
+        isDrawingRef.current = false;
+        if (startPointRef.current) {
+          pointsRef.current.push(startPointRef.current);
+        }
+        selectPixels(pointsRef.current, activeCanvas);
+        renderSelection(drawingCanvasCtx, activeCanvas, pointsRef.current, startPointRef.current);
 
-    return () => {
-      drawCanvas.removeEventListener("mousedown", handleMouseDown);
-      drawCanvas.removeEventListener("mousemove", handleMouseMove);
-      drawCanvas.removeEventListener("mouseup", handleMouseUp);
-      drawCanvas.removeEventListener("touchstart", handleTouchStart);
-      drawCanvas.removeEventListener("touchmove", handleTouchMove);
-      drawCanvas.removeEventListener("touchend", handleTouchEnd);
-      drawCanvas.removeEventListener("touchcancel", handleTouchCancel);
-    };
-  }, [ongoingTouches, state.selectedSelectionIdx, dispatch, getOngoingTouchById, renderCanvas, selectPixels]);
+        console.log(`Selected ${selectedPixelsRef.current.size} pixels`);
+      };
 
+      const handleTouchCancel = (e: TouchEvent) => {
+        e.preventDefault();
+        const touches = e.changedTouches;
+        for (let i = 0; i < touches.length; i++) {
+          const idx = getOngoingTouchById(touches[i].identifier);
+          if (idx >= 0) {
+            setOngoingTouches((prev) => prev.filter((_, j) => j !== idx));
+          }
+        }
+        isDrawingRef.current = false;
+      };
+
+      activeCanvas.addEventListener("mousedown", handleMouseDown);
+      activeCanvas.addEventListener("mousemove", handleMouseMove);
+      activeCanvas.addEventListener("mouseup", handleMouseUp);
+      activeCanvas.addEventListener("touchstart", handleTouchStart);
+      activeCanvas.addEventListener("touchmove", handleTouchMove);
+      activeCanvas.addEventListener("touchend", handleTouchEnd);
+      activeCanvas.addEventListener("touchcancel", handleTouchCancel);
+
+      return () => {
+        activeCanvas.removeEventListener("mousedown", handleMouseDown);
+        activeCanvas.removeEventListener("mousemove", handleMouseMove);
+        activeCanvas.removeEventListener("mouseup", handleMouseUp);
+        activeCanvas.removeEventListener("touchstart", handleTouchStart);
+        activeCanvas.removeEventListener("touchmove", handleTouchMove);
+        activeCanvas.removeEventListener("touchend", handleTouchEnd);
+        activeCanvas.removeEventListener("touchcancel", handleTouchCancel);
+      };
+    }, 0);
+
+    return () => clearTimeout(timeout)
+
+  }, [ongoingTouches, state.selectedSelectionIdx, state.currentSelection?.ctx, dispatch, getOngoingTouchById, selectPixels]);
+
+  // Handle selection render on layer index change
   useEffect(() => {
-    // when user selects a layer, sync its points into refs
-    if (!drawCtxRef.current) return;
+    const container = containerRef.current;
+    if (!container) return;
 
+    const activeCanvas = container.querySelector<HTMLCanvasElement>(
+      `#drawing-canvas-${state.selectedSelectionIdx}`
+    );
+
+    // when user selects a layer, sync its points into refs
     pointsRef.current = state.currentSelection?.points || [];
     startPointRef.current = state.currentSelection?.start || null;
 
-    // now redraw the overlay
-    renderCanvas(drawCtxRef.current);
-  }, [state.currentSelection, renderCanvas]);
+    // now redraw the overlay only if there is already a drawing canvas element for this layer
+    if (activeCanvas && state.currentSelection?.ctx) {
+      renderSelection(state.currentSelection.ctx, activeCanvas, pointsRef.current, startPointRef.current);
+    }
+
+    // create drawing canvas on new layer creation
+    if (state.selectedSelectionIdx >= 0 && !state.currentSelection?.ctx) {
+      const container = containerRef.current;
+      if (!container) return;
+      const img = imageCanvasRef.current;
+      const drawingCanvas = document.createElement("canvas");
+
+      // set drawing canvas dimension with the image dimension
+      if (img) {
+        drawingCanvas.width = img.width
+        drawingCanvas.height = img.height
+      };
+
+      drawingCanvas.id = `drawing-canvas-${state.selectedSelectionIdx}`;
+      Object.assign(drawingCanvas.style, {
+        position: "absolute",
+        top: "0",
+        left: "0",
+        width: "100%",
+        height: "100%",
+        cursor: "crosshair",
+      });
+
+      container.appendChild(drawingCanvas);
+      const ctx = drawingCanvas.getContext("2d");
+      dispatch({
+        type: ActionType.UpdateSelection,
+        payload: {
+          layerIdx: state.selectedSelectionIdx,
+          pselection: { ctx },
+        }
+      })
+    }
+  }, [state.selectedSelectionIdx, state.currentSelection, dispatch]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // find all canvases with id starting with "drawing-canvas-"
+    const canvases = container.querySelectorAll<HTMLCanvasElement>('[id^="drawing-canvas-"]');
+
+    canvases.forEach((canvas) => {
+      // extract the numeric index from the id
+      const idx = Number(canvas.id.replace('drawing-canvas-', ''));
+
+      if (idx === state.selectedSelectionIdx) {
+        canvas.classList.add('active');
+        canvas.style.pointerEvents = 'auto';
+      } else {
+        canvas.classList.remove('active');
+        canvas.style.pointerEvents = 'none';
+      }
+    });
+  }, [state.selectedSelectionIdx]);
 
   return (
     <div
@@ -341,17 +407,6 @@ function Canvas({ src, ...props }: CanvasProps) {
           display: "block",
           maxWidth: "100%",
           height: "auto",
-        }}
-      />
-      <canvas
-        ref={drawCanvasRef}
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          cursor: "crosshair",
         }}
       />
     </div>

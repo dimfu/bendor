@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import "./App.css";
 import Canvas from "./canvas";
 import Selections from "./components/selections";
@@ -7,7 +7,6 @@ import { useStore } from "./hooks";
 
 function App() {
   const { dispatch } = useStore();
-  const [imgBuf, setImageBuf] = useState<ArrayBuffer>();
   const imageRef = useRef<HTMLInputElement>(null);
 
   const onImageChange = () => {
@@ -19,7 +18,7 @@ function App() {
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target && event.target.result instanceof ArrayBuffer) {
-        setImageBuf(event.target.result);
+        dispatch({ type: ActionType.SetImageBuf, payload: event.target.result })
       }
     };
     reader.readAsArrayBuffer(file);
@@ -35,10 +34,8 @@ function App() {
         type="file"
         accept="image/*"
       />
-      <div>
-        <Selections />
-        <Canvas src={imgBuf} />
-      </div>
+      <Selections />
+      <Canvas />
     </>
   );
 }

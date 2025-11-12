@@ -1,9 +1,18 @@
+export enum Filter {
+  Tint = "Tint",
+  Grayscale = "Grayscale",
+  None = "None"
+}
+
 export interface PSelection {
   points: Point[];
   start: Point;
+  filter: Filter;
+  ctx: CanvasRenderingContext2D | null;
 }
 
 export interface State {
+  imgBuf: ArrayBuffer
   selections: PSelection[];
   currentSelection?: PSelection;
   selectedSelectionIdx: number;
@@ -14,10 +23,4 @@ export type Point = {
   y: number;
 };
 
-export type ColorChannel = Int8Array & { readonly length: 4 }
-export type RGBA = [
-  ColorChannel,
-  ColorChannel,
-  ColorChannel,
-  ColorChannel
-]
+export type ColorChannel = Uint8Array & { readonly length: 4 }
