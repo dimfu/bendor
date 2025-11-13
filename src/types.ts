@@ -17,6 +17,8 @@ export interface Layer {
   // The visual filter that applied to this layer
   filter: Filter;
   ctx: CanvasRenderingContext2D | null;
+  // Color to differentiate current layer with other layers
+  color: `#${string}`;
 }
 
 export interface State {

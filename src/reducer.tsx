@@ -85,6 +85,7 @@ const reducer = (state: State, action: Action): State => {
         start: { x: 0, y: 0 },
         filter: Filter.None,
         ctx: null,
+        color: `# ${(Math.random() * 0xFFFFFF << 0).toString(16).padStart(6, '0')}`
       };
       const nextLayers = [...state.layers, newLayer];
       const nextIdx = nextLayers.length - 1;

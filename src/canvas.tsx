@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ColorChannel, Point } from "./types";
+import type { ColorChannel, Layer, Point } from "./types";
 import { ActionType } from "./reducer";
 import { useStore } from "./hooks";
 
@@ -111,13 +111,19 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
     ctx: CanvasRenderingContext2D,
     element: HTMLCanvasElement,
     points: Point[],
-    start: Point | null
+    start: Point | null,
+    color: Layer['color']
   ) => {
     if (points.length <= 1 || !start) return;
     ctx.clearRect(0, 0, element.width, element.height);
     ctx.setLineDash([5, 3]);
-    ctx.strokeStyle = "black";
-    ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+    ctx.strokeStyle = color;
+    const toRgb = color
+      .replace(/^#?([a-f\d])([a-f\d])([a-f\d])$/i, (_, r, g, b) => `#${r}${r}${g}${g}${b}${b}`)
+      .substring(1)
+      .match(/.{2}/g)
+      ?.map(x => parseInt(x, 16)) ?? [0, 0, 0];
+    ctx.fillStyle = `rgb(${toRgb[0]}, ${toRgb[1]}, ${toRgb[2]}, 0.3)`;
     ctx.lineWidth = 2;
     ctx.beginPath();
 
@@ -218,7 +224,8 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
           drawingCanvasCtx,
           activeCanvas,
           pointsRef.current,
-          startPointRef.current
+          startPointRef.current,
+          state.currentLayer!.color,
         );
       };
 
@@ -231,7 +238,8 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
           drawingCanvasCtx,
           activeCanvas,
           pointsRef.current,
-          startPointRef.current
+          startPointRef.current,
+          state.currentLayer!.color,
         );
       };
 
@@ -253,7 +261,8 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
           drawingCanvasCtx,
           activeCanvas,
           pointsRef.current,
-          startPointRef.current
+          startPointRef.current,
+          state.currentLayer!.color,
         );
 
         dispatch({
@@ -282,7 +291,8 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
             drawingCanvasCtx,
             activeCanvas,
             pointsRef.current,
-            startPointRef.current
+            startPointRef.current,
+            state.currentLayer!.color,
           );
         }
       };
@@ -311,7 +321,8 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
           drawingCanvasCtx,
           activeCanvas,
           pointsRef.current,
-          startPointRef.current
+          startPointRef.current,
+          state.currentLayer!.color,
         );
       };
 
@@ -336,7 +347,8 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
           drawingCanvasCtx,
           activeCanvas,
           pointsRef.current,
-          startPointRef.current
+          startPointRef.current,
+          state.currentLayer!.color,
         );
 
         console.log(`Selected ${selectedPixelsRef.current.size} pixels`);
@@ -377,7 +389,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
   }, [
     ongoingTouches,
     state.selectedLayerIdx,
-    state.currentLayer?.ctx,
+    state.currentLayer,
     dispatch,
     getOngoingTouchById,
     selectPixels,
@@ -402,7 +414,8 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
         state.currentLayer.ctx,
         activeCanvas,
         pointsRef.current,
-        startPointRef.current
+        startPointRef.current,
+        state.currentLayer.color,
       );
     }
 
