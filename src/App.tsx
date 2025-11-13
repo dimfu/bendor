@@ -18,7 +18,10 @@ function App() {
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target && event.target.result instanceof ArrayBuffer) {
-        dispatch({ type: ActionType.SetImageBuf, payload: event.target.result })
+        dispatch({
+          type: ActionType.SetImageBuf,
+          payload: event.target.result,
+        });
       }
     };
     reader.readAsArrayBuffer(file);

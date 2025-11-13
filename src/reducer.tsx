@@ -12,9 +12,9 @@ export enum ActionType {
 }
 
 interface SetImageBuf {
-  type: ActionType.SetImageBuf,
-  payload: ArrayBuffer,
-};
+  type: ActionType.SetImageBuf;
+  payload: ArrayBuffer;
+}
 
 interface CreateNewLayer {
   type: ActionType.CreateNewLayer;
@@ -37,9 +37,9 @@ interface ClearSelections {
 interface UpdateSelection {
   type: ActionType.UpdateSelection;
   payload: {
-    layerIdx: number,
-    pselection: Partial<PSelection>,
-  }
+    layerIdx: number;
+    pselection: Partial<PSelection>;
+  };
 }
 
 function isInBounds(arrLen: number, idx: number): boolean {
@@ -58,8 +58,8 @@ const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case ActionType.SetImageBuf: {
       let imgBuf = state.imgBuf;
-      imgBuf = action.payload
-      return { ...state, imgBuf }
+      imgBuf = action.payload;
+      return { ...state, imgBuf };
     }
 
     case ActionType.CreateNewLayer: {
@@ -88,8 +88,8 @@ const reducer = (state: State, action: Action): State => {
         ...updated[state.selectedSelectionIdx],
         start: action.payload.start,
         points: action.payload.points,
-        filter: updated[state.selectedSelectionIdx].filter
-      }
+        filter: updated[state.selectedSelectionIdx].filter,
+      };
 
       return {
         ...state,
