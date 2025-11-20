@@ -45,6 +45,20 @@ function App() {
       />
       <Selections />
       <Canvas />
+      <button
+        onClick={() =>
+          dispatch({ type: ActionType.DoLayerAction, payload: "undo" })
+        }
+      >
+        Undo
+      </button>
+      <button
+        onClick={() =>
+          dispatch({ type: ActionType.DoLayerAction, payload: "redo" })
+        }
+      >
+        Redo
+      </button>
       <button onClick={generateResult}>Generate</button>
     </>
   );

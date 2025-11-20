@@ -1,5 +1,12 @@
 import { initialState } from "./misc";
-import { Filter, type Layer, type LSelection, type Point, type State } from "./types";
+import {
+  Filter,
+  type Layer,
+  type LSelection,
+  type Point,
+  type State,
+} from "./types";
+import Commands from "./utils/commands";
 
 export enum ActionType {
   SetOriginalAreaData,
@@ -8,6 +15,9 @@ export enum ActionType {
   SelectLayer,
   GetSelectedLayerPoint,
   ClearLayers,
+  DoLayerAction,
+  UndoLayer,
+  RedoLayer,
   UpdateLayer,
   UpdateLayerSelection,
   DeleteLayer,
@@ -35,6 +45,11 @@ interface ClearLayers {
   type: ActionType.ClearLayers;
 }
 
+interface DoLayerAction {
+  type: ActionType.DoLayerAction;
+  payload: "undo" | "redo";
+}
+
 interface UpdateLayer {
   type: ActionType.UpdateLayer;
   payload: {
@@ -48,6 +63,7 @@ interface UpdateLayerSelection {
   payload: {
     layerIdx: number;
     pselection: Partial<LSelection>;
+    withUpdateInitialPresent: boolean;
   };
 }
 
@@ -89,6 +105,7 @@ export type Action =
   | SetPointsToLayer
   | SelectLayer
   | ClearLayers
+  | DoLayerAction
   | UpdateLayer
   | UpdateLayerSelection
   | DeleteLayer
@@ -120,17 +137,19 @@ const getDimension = (points: Point[]) => {
 const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case ActionType.CreateNewLayer: {
+      const selection: LSelection = {
+        points: [],
+        area: [],
+        start: { x: 0, y: 0 },
+        filter: Filter.None,
+      };
       const newLayer: Layer = {
-        selection: {
-          points: [],
-          area: [],
-          start: { x: 0, y: 0 },
-          filter: Filter.None,
-        },
+        selection,
         ctx: null,
         color: `# ${((Math.random() * 0xffffff) << 0)
           .toString(16)
           .padStart(6, "0")}`,
+        commands: new Commands(selection),
       };
       const nextLayers = [...state.layers, newLayer];
       const nextIdx = nextLayers.length - 1;
@@ -146,7 +165,7 @@ const reducer = (state: State, action: Action): State => {
       if (!isInBounds(state.layers.length, state.selectedLayerIdx))
         return state;
 
-      const updated = [...state.layers];
+      const updated = state.layers.map((layer) => ({ ...layer }));
       updated[state.selectedLayerIdx] = {
         ...updated[state.selectedLayerIdx],
         selection: {
@@ -154,8 +173,11 @@ const reducer = (state: State, action: Action): State => {
           start: action.payload.start,
           points: action.payload.points,
           filter: updated[state.selectedLayerIdx].selection.filter,
-        }
+        },
       };
+
+      const curr = updated[state.selectedLayerIdx];
+      curr.commands = curr.commands.set(curr.selection);
 
       return {
         ...state,
@@ -177,7 +199,7 @@ const reducer = (state: State, action: Action): State => {
       if (!isInBounds(state.layers.length, state.selectedLayerIdx))
         return state;
 
-      const updated = [...state.layers];
+      const updated = state.layers.map((layer) => ({ ...layer }));
       updated[action.payload.layerIdx] = {
         ...updated[action.payload.layerIdx],
         ...action.payload.pselection,
@@ -197,15 +219,26 @@ const reducer = (state: State, action: Action): State => {
       if (!isInBounds(state.layers.length, state.selectedLayerIdx))
         return state;
 
-      const updated = [...state.layers];
+      const updated = state.layers.map((layer) => ({ ...layer }));
       updated[action.payload.layerIdx] = {
         ...updated[action.payload.layerIdx],
         selection: {
           ...updated[action.payload.layerIdx].selection,
           ...action.payload.pselection,
-        }
+        },
       };
       const isCurrent = action.payload.layerIdx === state.selectedLayerIdx;
+
+      const curr = updated[state.selectedLayerIdx];
+      // update the area array on initial `present` value of layer's commands
+      // since the initial value was an empty array
+      if (action.payload.withUpdateInitialPresent) {
+        curr.commands.present = {
+          ...updated[action.payload.layerIdx].selection,
+        };
+      } else {
+        curr.commands = curr.commands.set(curr.selection);
+      }
 
       return {
         ...state,
@@ -222,6 +255,31 @@ const reducer = (state: State, action: Action): State => {
         imgCtx: null,
         originalAreaData: [],
       };
+
+    case ActionType.DoLayerAction: {
+      const updated = state.layers.map((layer) => ({ ...layer }));
+      const curr = updated[state.selectedLayerIdx];
+      if (action.payload === "undo") {
+        if (!curr.commands.canUndo()) {
+          return state;
+        }
+        curr.commands = curr.commands.undo();
+      } else {
+        if (!curr.commands.canRedo()) {
+          console.log("cant redo");
+          return state;
+        }
+        curr.commands = curr.commands.redo();
+      }
+
+      curr.selection = curr.commands.present;
+
+      return {
+        ...state,
+        layers: updated,
+        currentLayer: curr,
+      };
+    }
 
     case ActionType.DeleteLayer: {
       let selectedLayerIdx = action.payload;
@@ -283,8 +341,8 @@ const reducer = (state: State, action: Action): State => {
 
       const imageCanvas = state.imgCtx;
       if (!imageCanvas) {
-        return state
-      };
+        return state;
+      }
 
       canvases.forEach(({ area, filter }) => {
         let points = area.filter((p) => p.data);

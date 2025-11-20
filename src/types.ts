@@ -1,3 +1,5 @@
+import type Commands from "./utils/commands";
+
 export type Point = {
   x: number;
   y: number;
@@ -7,7 +9,7 @@ export type Point = {
 export enum Filter {
   Tint = "Tint",
   Grayscale = "Grayscale",
-  None = "None"
+  None = "None",
 }
 
 export interface LSelection {
@@ -27,10 +29,11 @@ export interface Layer {
   color: `#${string}`;
   // To store every user action on the stack so that it can be reverted back or forward
   ctx: CanvasRenderingContext2D | null;
+  commands: Commands<LSelection>;
 }
 
 export interface State {
-  imgBuf: ArrayBuffer
+  imgBuf: ArrayBuffer;
   imgCtx: CanvasRenderingContext2D | null;
   originalAreaData: Point[];
   layers: Layer[];
@@ -38,4 +41,4 @@ export interface State {
   selectedLayerIdx: number;
 }
 
-export type ColorChannel = Uint8Array & { readonly length: 4 }
+export type ColorChannel = Uint8Array & { readonly length: 4 };

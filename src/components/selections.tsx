@@ -22,6 +22,7 @@ function Selections() {
                     pselection: {
                       filter: event.target.value as Filter,
                     },
+                    withUpdateInitialPresent: false,
                   },
                 })
               }

@@ -265,6 +265,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
             pselection: {
               area,
             },
+            withUpdateInitialPresent: true,
           },
         });
       };
@@ -403,11 +404,19 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
     const { points, start, area } = state.currentLayer.selection;
 
     // when user selects a layer, sync its points into refs
-    pointsRef.current = points || [];
-    startPointRef.current = start || null;
+    pointsRef.current = points;
+    startPointRef.current = start;
 
     // now redraw the overlay only if there is already a drawing canvas element for this layer
     if (activeCanvas && state.currentLayer?.ctx) {
+      if (pointsRef.current.length === 0) {
+        state.currentLayer.ctx?.clearRect(
+          0,
+          0,
+          activeCanvas?.width,
+          activeCanvas?.height
+        );
+      }
       areaRef.current = area;
       renderSelection(
         state.currentLayer.ctx,
@@ -449,13 +458,14 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
         payload: {
           layerIdx: state.selectedLayerIdx,
           pselection: { ctx },
-        }
-      })
+        },
+      });
       dispatch({
         type: ActionType.UpdateLayerSelection,
         payload: {
           layerIdx: state.selectedLayerIdx,
           pselection: { area: state.originalAreaData },
+          withUpdateInitialPresent: false,
         },
       });
     }
@@ -463,6 +473,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
     state.selectedLayerIdx,
     state.currentLayer,
     state.originalAreaData,
+    state.currentLayer?.commands.present,
     dispatch,
     getPixelsInArea,
   ]);
