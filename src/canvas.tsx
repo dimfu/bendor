@@ -128,6 +128,19 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
     const imageCanvas = imageCanvasRef.current;
     const imageCtx = imageCanvas.getContext("2d");
     if (!imageCtx) return;
+
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+    // remove all previously existing canvas to avoid duplicating when changing image
+    const canvases = container.querySelectorAll<HTMLCanvasElement>(
+      '[id^="drawing-canvas-"]'
+    );
+    canvases.forEach((canvas) => {
+      canvas.remove();
+    });
+
     // load image
     const blob = new Blob([state.imgBuf]);
     const url = URL.createObjectURL(blob);
@@ -163,7 +176,6 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
         payload: { key: "originalAreaData", value: area },
       });
     };
-
     img.src = url;
   }, [state.imgBuf, dispatch]);
 

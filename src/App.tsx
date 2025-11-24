@@ -10,6 +10,7 @@ function App() {
   const imageRef = useRef<HTMLInputElement>(null);
 
   const onImageChange = () => {
+    dispatch({ type: ActionType.ClearLayers });
     const files = imageRef.current?.files;
     if (!files || files?.length == 0) {
       return;
@@ -25,8 +26,6 @@ function App() {
       }
     };
     reader.readAsArrayBuffer(file);
-    // clear every layers whenever new image loaded
-    dispatch({ type: ActionType.ClearLayers });
   };
 
   const generateResult = () => {
