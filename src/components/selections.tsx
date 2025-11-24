@@ -1,5 +1,5 @@
-import { useStore } from "../hooks";
-import { ActionType } from "../reducer";
+import { useStore } from "../hooks/useStore";
+import { StoreActionType } from "../providers/store/reducer";
 import { Filter } from "../types";
 
 function Selections() {
@@ -7,7 +7,7 @@ function Selections() {
   const filterList = Object.keys(Filter);
   return (
     <div>
-      <button onClick={() => dispatch({ type: ActionType.CreateNewLayer })}>
+      <button onClick={() => dispatch({ type: StoreActionType.CreateNewLayer })}>
         Add new selection
       </button>
       <ul>
@@ -16,7 +16,7 @@ function Selections() {
             <select
               onChange={(event) =>
                 dispatch({
-                  type: ActionType.UpdateLayerSelection,
+                  type: StoreActionType.UpdateLayerSelection,
                   payload: {
                     layerIdx: idx,
                     pselection: {
@@ -34,14 +34,14 @@ function Selections() {
             </select>
             <button
               onClick={() =>
-                dispatch({ type: ActionType.SelectLayer, payload: idx })
+                dispatch({ type: StoreActionType.SelectLayer, payload: idx })
               }
             >
               {state.selectedLayerIdx == idx ? "(Active)" : "Select"}
             </button>
             <button
               onClick={() =>
-                dispatch({ type: ActionType.DeleteLayer, payload: idx })
+                dispatch({ type: StoreActionType.DeleteLayer, payload: idx })
               }
             >
               Delete
@@ -49,7 +49,7 @@ function Selections() {
             <button
               onClick={() =>
                 dispatch({
-                  type: ActionType.MoveLayer,
+                  type: StoreActionType.MoveLayer,
                   payload: { direction: "up", layerIdx: idx },
                 })
               }
@@ -59,7 +59,7 @@ function Selections() {
             <button
               onClick={() =>
                 dispatch({
-                  type: ActionType.MoveLayer,
+                  type: StoreActionType.MoveLayer,
                   payload: { direction: "down", layerIdx: idx },
                 })
               }

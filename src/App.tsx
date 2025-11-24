@@ -1,16 +1,16 @@
 import { useRef } from "react";
 import "./App.css";
-import Canvas from "./canvas";
 import Selections from "./components/selections";
-import { ActionType } from "./reducer";
-import { useStore } from "./hooks";
+import { useStore } from "./hooks/useStore";
+import { StoreActionType } from "./providers/store/reducer";
+import Canvas from "./components/canvas";
 
 function App() {
   const { dispatch } = useStore();
   const imageRef = useRef<HTMLInputElement>(null);
 
   const onImageChange = () => {
-    dispatch({ type: ActionType.ClearLayers });
+    dispatch({ type: StoreActionType.ClearLayers });
     const files = imageRef.current?.files;
     if (!files || files?.length == 0) {
       return;
@@ -20,7 +20,7 @@ function App() {
     reader.onload = (event) => {
       if (event.target && event.target.result instanceof ArrayBuffer) {
         dispatch({
-          type: ActionType.UpdateState,
+          type: StoreActionType.UpdateState,
           payload: { key: "imgBuf", value: event.target.result },
         });
       }
@@ -29,8 +29,8 @@ function App() {
   };
 
   const generateResult = () => {
-    dispatch({ type: ActionType.ResetImageCanvas });
-    dispatch({ type: ActionType.GenerateResult });
+    dispatch({ type: StoreActionType.ResetImageCanvas });
+    dispatch({ type: StoreActionType.GenerateResult });
   };
 
   return (
@@ -46,14 +46,14 @@ function App() {
       <Canvas />
       <button
         onClick={() =>
-          dispatch({ type: ActionType.DoLayerAction, payload: "undo" })
+          dispatch({ type: StoreActionType.DoLayerAction, payload: "undo" })
         }
       >
         Undo
       </button>
       <button
         onClick={() =>
-          dispatch({ type: ActionType.DoLayerAction, payload: "redo" })
+          dispatch({ type: StoreActionType.DoLayerAction, payload: "redo" })
         }
       >
         Redo

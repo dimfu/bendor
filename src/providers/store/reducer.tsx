@@ -1,14 +1,8 @@
-import { initialState } from "./misc";
-import {
-  Filter,
-  type Layer,
-  type LSelection,
-  type Point,
-  type State,
-} from "./types";
-import Commands from "./utils/commands";
+import { Filter, type Layer, type LSelection, type Point, type State } from "../../types";
+import Commands from "../../utils/commands";
+import { initialStoreState } from "./initialState";
 
-export enum ActionType {
+export enum StoreActionType {
   SetOriginalAreaData,
   CreateNewLayer,
   SetPointsToLayer,
@@ -28,30 +22,30 @@ export enum ActionType {
 }
 
 interface CreateNewLayer {
-  type: ActionType.CreateNewLayer;
+  type: StoreActionType.CreateNewLayer;
 }
 
 interface SetPointsToLayer {
-  type: ActionType.SetPointsToLayer;
+  type: StoreActionType.SetPointsToLayer;
   payload: Pick<LSelection, "start" | "points">;
 }
 
 interface SelectLayer {
-  type: ActionType.SelectLayer;
+  type: StoreActionType.SelectLayer;
   payload: number;
 }
 
 interface ClearLayers {
-  type: ActionType.ClearLayers;
+  type: StoreActionType.ClearLayers;
 }
 
 interface DoLayerAction {
-  type: ActionType.DoLayerAction;
+  type: StoreActionType.DoLayerAction;
   payload: "undo" | "redo";
 }
 
 interface UpdateLayer {
-  type: ActionType.UpdateLayer;
+  type: StoreActionType.UpdateLayer;
   payload: {
     layerIdx: number;
     pselection: Partial<Layer>;
@@ -59,7 +53,7 @@ interface UpdateLayer {
 }
 
 interface UpdateLayerSelection {
-  type: ActionType.UpdateLayerSelection;
+  type: StoreActionType.UpdateLayerSelection;
   payload: {
     layerIdx: number;
     pselection: Partial<LSelection>;
@@ -68,12 +62,12 @@ interface UpdateLayerSelection {
 }
 
 interface DeleteLayer {
-  type: ActionType.DeleteLayer;
+  type: StoreActionType.DeleteLayer;
   payload: number;
 }
 
 interface MoveLayer {
-  type: ActionType.MoveLayer;
+  type: StoreActionType.MoveLayer;
   payload: {
     direction: "up" | "down";
     layerIdx: number;
@@ -81,15 +75,15 @@ interface MoveLayer {
 }
 
 interface GenerateResult {
-  type: ActionType.GenerateResult;
+  type: StoreActionType.GenerateResult;
 }
 
 interface ResetImageCanvas {
-  type: ActionType.ResetImageCanvas;
+  type: StoreActionType.ResetImageCanvas;
 }
 
 interface UpdateState<K extends keyof State> {
-  type: ActionType.UpdateState;
+  type: StoreActionType.UpdateState;
   payload: {
     key: K;
     value: State[K];
@@ -134,9 +128,9 @@ const getDimension = (points: Point[]) => {
   return [width, height, minX, minY];
 };
 
-const reducer = (state: State, action: Action): State => {
+const storeReducer = (state: State, action: Action): State => {
   switch (action.type) {
-    case ActionType.CreateNewLayer: {
+    case StoreActionType.CreateNewLayer: {
       const selection: LSelection = {
         points: [],
         area: [],
@@ -161,7 +155,7 @@ const reducer = (state: State, action: Action): State => {
       };
     }
 
-    case ActionType.SetPointsToLayer: {
+    case StoreActionType.SetPointsToLayer: {
       if (!isInBounds(state.layers.length, state.selectedLayerIdx))
         return state;
 
@@ -185,7 +179,7 @@ const reducer = (state: State, action: Action): State => {
       };
     }
 
-    case ActionType.SelectLayer: {
+    case StoreActionType.SelectLayer: {
       const idx = action.payload;
       if (!isInBounds(state.layers.length, idx)) return { ...state };
       return {
@@ -195,7 +189,7 @@ const reducer = (state: State, action: Action): State => {
       };
     }
 
-    case ActionType.UpdateLayer: {
+    case StoreActionType.UpdateLayer: {
       if (!isInBounds(state.layers.length, state.selectedLayerIdx))
         return state;
 
@@ -215,7 +209,7 @@ const reducer = (state: State, action: Action): State => {
       };
     }
 
-    case ActionType.UpdateLayerSelection: {
+    case StoreActionType.UpdateLayerSelection: {
       if (!isInBounds(state.layers.length, state.selectedLayerIdx))
         return state;
 
@@ -249,14 +243,14 @@ const reducer = (state: State, action: Action): State => {
       };
     }
 
-    case ActionType.ClearLayers:
+    case StoreActionType.ClearLayers:
       return {
-        ...initialState,
+        ...initialStoreState,
         imgCtx: null,
         originalAreaData: [],
       };
 
-    case ActionType.DoLayerAction: {
+    case StoreActionType.DoLayerAction: {
       const updated = state.layers.map((layer) => ({ ...layer }));
       const curr = updated[state.selectedLayerIdx];
       if (action.payload === "undo") {
@@ -281,7 +275,7 @@ const reducer = (state: State, action: Action): State => {
       };
     }
 
-    case ActionType.DeleteLayer: {
+    case StoreActionType.DeleteLayer: {
       let selectedLayerIdx = action.payload;
       const updated = [...state.layers].filter(
         (_, idx) => idx != selectedLayerIdx
@@ -302,7 +296,7 @@ const reducer = (state: State, action: Action): State => {
       };
     }
 
-    case ActionType.MoveLayer: {
+    case StoreActionType.MoveLayer: {
       const fromIdx = action.payload.layerIdx;
       const toIdx =
         action.payload.direction === "up" ? fromIdx - 1 : fromIdx + 1;
@@ -330,7 +324,7 @@ const reducer = (state: State, action: Action): State => {
       };
     }
 
-    case ActionType.GenerateResult: {
+    case StoreActionType.GenerateResult: {
       // get all canvas from top to bottom
       const canvases = state.layers.map(({ selection: { area, filter } }) => {
         return {
@@ -383,7 +377,7 @@ const reducer = (state: State, action: Action): State => {
       return { ...state };
     }
 
-    case ActionType.ResetImageCanvas: {
+    case StoreActionType.ResetImageCanvas: {
       const imageCanvas = state.imgCtx;
       if (!imageCanvas) return state;
 
@@ -406,7 +400,7 @@ const reducer = (state: State, action: Action): State => {
       return state;
     }
 
-    case ActionType.UpdateState: {
+    case StoreActionType.UpdateState: {
       const { key, value } = action.payload;
       return {
         ...state,
@@ -419,4 +413,4 @@ const reducer = (state: State, action: Action): State => {
   }
 };
 
-export default reducer;
+export default storeReducer;
