@@ -5,28 +5,41 @@ import { StoreActionType } from "../providers/store/reducer";
 import { useLoading } from "../hooks/useLoading";
 
 // retrieve pixel data from area inside the selection points
-function getAreaData(ctx: CanvasRenderingContext2D, selection: Point[]): Point[] {
+function getAreaData(
+  ctx: CanvasRenderingContext2D,
+  selectionMask: Uint8Array
+): Point[] {
   const { data, width } = ctx.getImageData(
     0,
     0,
     ctx.canvas.width,
     ctx.canvas.height
   );
-  const extractPixel = (index: number): ColorChannel =>
-    new Uint8Array([
-      data[index],
-      data[index + 1],
-      data[index + 2],
-      data[index + 3],
+
+  const result: Point[] = [];
+
+  for (let index = 0; index < selectionMask.length; index++) {
+    if (selectionMask[index] === 0) continue;
+
+    const x = index % width;
+    const y = Math.floor(index / width);
+
+    const pixelOffset = index * 4;
+    const channel = new Uint8Array([
+      data[pixelOffset],
+      data[pixelOffset + 1],
+      data[pixelOffset + 2],
+      data[pixelOffset + 3]
     ]) as ColorChannel;
-  return selection.map((point) => {
-    const index = (point.y * width + point.x) * 4;
-    return {
-      x: point.x,
-      y: point.y,
-      data: extractPixel(index),
-    };
-  });
+
+    result.push({
+      x,
+      y,
+      data: channel
+    });
+  }
+
+  return result;
 }
 
 function isPointInPolygon(point: Point, polygon: Point[]): boolean {
@@ -99,7 +112,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
   const isDrawingRef = useRef(false);
   const pointsRef = useRef<Point[]>([]);
   const startPointRef = useRef<Point | null>(null);
-  const areaRef = useRef<Point[]>([]);
+  const areaRef = useRef<Uint8Array | null>(null);
 
   const [ongoingTouches, setOngoingTouches] = useState<Touch[]>([]);
 
@@ -112,12 +125,12 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
   const selectArea = useCallback(
     (points: Point[], canvas: HTMLCanvasElement) => {
       if (points.length <= 1) return;
-      areaRef.current = [];
-      const steps = 1;
-      for (let x = 0; x < canvas.width; x += steps) {
-        for (let y = 0; y < canvas.height; y += steps) {
+      areaRef.current = new Uint8Array(canvas.width * canvas.height);
+      for (let x = 0; x < canvas.width; x++) {
+        for (let y = 0; y < canvas.height; y++) {
           if (isPointInPolygon({ x, y }, points)) {
-            areaRef.current.push({ x, y });
+            const index = y * canvas.width + x;
+            areaRef.current[index] = 1;
           }
         }
       }
@@ -152,27 +165,12 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       imageCanvas.width = img.naturalWidth;
       imageCanvas.height = img.naturalHeight;
       imageCtx.drawImage(img, 0, 0);
-      // default selection is set to whole image
-      const imageData = imageCtx.getImageData(
-        0,
-        0,
-        imageCanvas.width,
-        imageCanvas.height
-      );
       dispatch({
         type: StoreActionType.UpdateState,
         payload: { key: "imgCtx", value: imageCtx },
       });
-      // keep originalAreaData in case no layer selection, so we can use the whole image as the selected area
-      const data = imageData.data;
-      areaRef.current = [];
-      // push whole image coordinates to the areaRef
-      for (let i = 0; i < data.length; i += 4) {
-        const pixelIndex = i / 4;
-        const x = pixelIndex % imageCanvas.width;
-        const y = Math.floor(pixelIndex / imageCanvas.width);
-        areaRef.current.push({ x, y });
-      }
+      areaRef.current = new Uint8Array(img.naturalWidth * img.naturalHeight);
+      areaRef.current.fill(1);
       const area = getAreaData(imageCtx, areaRef.current);
       dispatch({
         type: StoreActionType.UpdateState,
@@ -221,7 +219,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
           return;
         }
         isDrawingRef.current = true;
-        areaRef.current = [];
+        areaRef.current = new Uint8Array(activeCanvas.width * activeCanvas.height);
         const point = getCanvasCoordinates(e.clientX, e.clientY);
         startPointRef.current = point;
         pointsRef.current = [point];
@@ -250,7 +248,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
 
       const handleMouseUp = () => {
         if (!isDrawingRef.current) return;
-        areaRef.current = [];
+        areaRef.current = new Uint8Array(activeCanvas.width * activeCanvas.height);
         isDrawingRef.current = false;
         if (startPointRef.current) {
           pointsRef.current.push(startPointRef.current);
@@ -278,7 +276,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
           const imageCanvas = imageCanvasRef.current;
           const imageCtx = imageCanvas?.getContext("2d");
           if (!imageCtx) return;
-          const area = getAreaData(imageCtx, areaRef.current);
+          const area = getAreaData(imageCtx, areaRef.current!);
           dispatch({
             type: StoreActionType.UpdateLayerSelection,
             payload: {
@@ -298,7 +296,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
         const touches = e.changedTouches;
         if (touches.length > 0) {
           isDrawingRef.current = true;
-          areaRef.current = [];
+          areaRef.current = new Uint8Array(activeCanvas.width * activeCanvas.height);
           const point = getCanvasCoordinates(
             touches[0].clientX,
             touches[0].clientY
@@ -369,8 +367,6 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
           startPointRef.current,
           state.currentLayer!.color
         );
-
-        console.log(`Selected ${areaRef.current.length} pixels`);
       };
 
       const handleTouchCancel = (e: TouchEvent) => {
@@ -441,7 +437,14 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
           activeCanvas?.height
         );
       }
-      areaRef.current = area;
+
+      // mark existing layer area coordinate in areaRef
+      areaRef.current = new Uint8Array(activeCanvas.width * activeCanvas.height);
+      for (const ap of area) {
+        const index = ap.y * activeCanvas.width + ap.x;
+        areaRef.current[index] = 1;
+      }
+
       renderSelection(
         state.currentLayer.ctx,
         activeCanvas,
