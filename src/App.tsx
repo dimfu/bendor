@@ -46,17 +46,17 @@ function App() {
       <Selections />
       <Canvas />
       <button
-        onClick={() =>
+        onClick={() => {
           dispatch({ type: StoreActionType.DoLayerAction, payload: "undo" })
-        }
-      >
+          generateResult();
+        }}>
         Undo
       </button>
       <button
-        onClick={() =>
+        onClick={() => {
           dispatch({ type: StoreActionType.DoLayerAction, payload: "redo" })
-        }
-      >
+          generateResult();
+        }}>
         Redo
       </button>
       <button onClick={generateResult}>Generate</button>

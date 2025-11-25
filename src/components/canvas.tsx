@@ -287,6 +287,8 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
               withUpdateInitialPresent: true,
             },
           });
+          dispatch({ type: StoreActionType.ResetImageCanvas });
+          dispatch({ type: StoreActionType.GenerateResult });
           stop();
         })
       };

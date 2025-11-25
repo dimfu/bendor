@@ -20,6 +20,39 @@ function Selections() {
     dispatch({ type: StoreActionType.GenerateResult });
   }
 
+  const onChangeFilter = (idx: number, value: Filter) => {
+    dispatch({
+      type: StoreActionType.UpdateLayerSelection,
+      payload: {
+        layerIdx: idx,
+        pselection: {
+          filter: value,
+        },
+        withUpdateInitialPresent: false,
+      },
+    })
+    dispatch({ type: StoreActionType.ResetImageCanvas });
+    dispatch({ type: StoreActionType.GenerateResult });
+  }
+
+  // clear selection by reverting back to selecting whole image as the area data
+  const onClearSelection = () => {
+    dispatch({
+      type: StoreActionType.SetPointsToLayer,
+      payload: { points: [], start: { x: 0, y: 0 } },
+    });
+    dispatch({
+      type: StoreActionType.UpdateLayerSelection,
+      payload: {
+        layerIdx: state.selectedLayerIdx,
+        pselection: { area: state.originalAreaData },
+        withUpdateInitialPresent: false,
+      },
+    });
+    dispatch({ type: StoreActionType.ResetImageCanvas });
+    dispatch({ type: StoreActionType.GenerateResult });
+  }
+
   return (
     <div>
       <button onClick={onAddLayer}>
@@ -29,18 +62,7 @@ function Selections() {
         {state.layers.map((point, idx) => (
           <li id={`${idx}`} key={idx}>
             <select
-              onChange={(event) =>
-                dispatch({
-                  type: StoreActionType.UpdateLayerSelection,
-                  payload: {
-                    layerIdx: idx,
-                    pselection: {
-                      filter: event.target.value as Filter,
-                    },
-                    withUpdateInitialPresent: false,
-                  },
-                })
-              }
+              onChange={(event) => onChangeFilter(idx, event.target.value as Filter)}
               value={point.selection.filter}
             >
               {filterList.map((filter) => (
@@ -54,6 +76,7 @@ function Selections() {
             >
               {state.selectedLayerIdx == idx ? "(Active)" : "Select"}
             </button>
+            <button onClick={onClearSelection}>Clear Selection</button>
             <button onClick={() => onDeleteLayer(idx)}>
               Delete
             </button>
@@ -80,7 +103,7 @@ function Selections() {
           </li>
         ))}
       </ul>
-    </div>
+    </div >
   );
 }
 
