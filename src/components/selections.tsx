@@ -31,8 +31,6 @@ function Selections() {
         withUpdateInitialPresent: false,
       },
     });
-    dispatch({ type: StoreActionType.ResetImageCanvas });
-    dispatch({ type: StoreActionType.GenerateResult });
   };
 
   // clear selection by reverting back to selecting whole image as the area data

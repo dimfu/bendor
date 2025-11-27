@@ -154,12 +154,10 @@ const defaultConfig = <F extends Filter>(filter: F): FilterConfigMap[F] => {
       return { blend: 0.50 } as FilterConfigMap[F];
     case Filter.Brightness:
       return { intensity: 1.0 } as FilterConfigMap[F];
-
     case Filter.Tint:
       return { r: 255, g: 255, b: 255 } as FilterConfigMap[F];
-
     case Filter.Grayscale:
-      return { intensity: 1 } as FilterConfigMap[F];
+      return { intensity: 1.0 } as FilterConfigMap[F];
   }
 }
 
@@ -381,7 +379,7 @@ const storeReducer = (state: State, action: Action): State => {
         return state;
       }
 
-      canvases.forEach(({ area, filter }) => {
+      canvases.forEach(({ area, filter }, idx) => {
         let points = area.filter((p) => p.data);
         if (points.length === 0) {
           points = state.originalAreaData;
@@ -444,7 +442,7 @@ const storeReducer = (state: State, action: Action): State => {
               glitchedData[i] = wavBytes[i % wavBytes.length];
             }
 
-            const selection = state.currentLayer?.selection as LSelection<Filter.AsSound>;
+            const selection = state.layers[idx].selection as LSelection<Filter.AsSound>;
             const bitRateBlend = selection.config.blend;
             // re-apply back the distorted data and also blend it by 50/50 so we can still
             // see the original image just a bit
@@ -466,7 +464,7 @@ const storeReducer = (state: State, action: Action): State => {
             break;
           }
           case Filter.Brightness: {
-            const selection = state.currentLayer?.selection as LSelection<Filter.Grayscale>;
+            const selection = state.layers[idx].selection as LSelection<Filter.Brightness>;
             const intensity = selection.config.intensity
             for (const { x, y, data: src } of points) {
               if (!src) continue;
@@ -482,7 +480,7 @@ const storeReducer = (state: State, action: Action): State => {
           case Filter.Tint:
             break;
           case Filter.Grayscale: {
-            const selection = state.currentLayer?.selection as LSelection<Filter.Grayscale>;
+            const selection = state.layers[idx].selection as LSelection<Filter.Grayscale>;
             const intensity = selection.config.intensity;
             for (const { x, y, data: src } of points) {
               if (!src) continue;
