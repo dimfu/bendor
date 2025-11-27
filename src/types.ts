@@ -8,12 +8,43 @@ export type Point = {
 
 export enum Filter {
   AsSound = "AsSound",
+  Brightness = "Brightness",
   Tint = "Tint",
   Grayscale = "Grayscale",
   None = "None",
 }
 
-export interface LSelection {
+interface AsSoundConfig {
+  blend: number;
+}
+
+interface GrayscaleConfig {
+  intensity: number
+}
+
+interface BrightnessConfig {
+  intensity: number;
+}
+
+interface TintConfig {
+  r: number
+  g: number
+  b: number
+}
+
+interface NoConfig {
+  _empty?: true;
+}
+
+export type FilterConfigMap = {
+  [Filter.AsSound]: AsSoundConfig;
+  [Filter.Brightness]: BrightnessConfig;
+  [Filter.Tint]: TintConfig;
+  [Filter.Grayscale]: GrayscaleConfig;
+  [Filter.None]: NoConfig;
+}
+
+export interface LSelection<F extends Filter = Filter> {
   // The collections of points that define the selected area on the layer
   points: Point[];
   // The area inside the selection point
@@ -22,6 +53,7 @@ export interface LSelection {
   start: Point;
   // The visual filter that applied to this layer
   filter: Filter;
+  config: FilterConfigMap[F];
 }
 
 export interface Layer {

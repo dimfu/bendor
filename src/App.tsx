@@ -5,6 +5,7 @@ import { useStore } from "./hooks/useStore";
 import { StoreActionType } from "./providers/store/reducer";
 import Canvas from "./components/canvas";
 import { LoadingProvider } from "./providers/loading/loadingProvider";
+import FilterConfigurations from "./components/filterConfigurations";
 
 function App() {
   const { dispatch } = useStore();
@@ -45,21 +46,24 @@ function App() {
       />
       <Selections />
       <Canvas />
-      <button
-        onClick={() => {
-          dispatch({ type: StoreActionType.DoLayerAction, payload: "undo" })
-          generateResult();
-        }}>
-        Undo
-      </button>
-      <button
-        onClick={() => {
-          dispatch({ type: StoreActionType.DoLayerAction, payload: "redo" })
-          generateResult();
-        }}>
-        Redo
-      </button>
-      <button onClick={generateResult}>Generate</button>
+      <div>
+        <button
+          onClick={() => {
+            dispatch({ type: StoreActionType.DoLayerAction, payload: "undo" })
+            generateResult();
+          }}>
+          Undo
+        </button>
+        <button
+          onClick={() => {
+            dispatch({ type: StoreActionType.DoLayerAction, payload: "redo" })
+            generateResult();
+          }}>
+          Redo
+        </button>
+        <button onClick={generateResult}>Generate</button>
+      </div>
+      <FilterConfigurations />
     </LoadingProvider>
   );
 }

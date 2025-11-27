@@ -1,6 +1,7 @@
 import {
   Filter,
   type ColorChannel,
+  type FilterConfigMap,
   type Layer,
   type LSelection,
   type Point,
@@ -145,14 +146,32 @@ const getDimension = (points: Point[]) => {
   return [width, height, minX, minY];
 };
 
+const defaultConfig = <F extends Filter>(filter: F): FilterConfigMap[F] => {
+  switch (filter) {
+    case Filter.None:
+      return { _empty: true } as FilterConfigMap[F];
+    case Filter.AsSound:
+      return { blend: 0.50 } as FilterConfigMap[F];
+    case Filter.Brightness:
+      return { intensity: 1.0 } as FilterConfigMap[F];
+
+    case Filter.Tint:
+      return { r: 255, g: 255, b: 255 } as FilterConfigMap[F];
+
+    case Filter.Grayscale:
+      return { intensity: 1 } as FilterConfigMap[F];
+  }
+}
+
 const storeReducer = (state: State, action: Action): State => {
   switch (action.type) {
     case StoreActionType.CreateNewLayer: {
-      const selection: LSelection = {
+      const selection: LSelection<Filter.None> = {
         points: [],
         area: [],
         start: { x: 0, y: 0 },
         filter: Filter.None,
+        config: defaultConfig(Filter.None),
       };
       const newLayer: Layer = {
         selection,
@@ -229,17 +248,24 @@ const storeReducer = (state: State, action: Action): State => {
     case StoreActionType.UpdateLayerSelection: {
       if (!isInBounds(state.layers.length, state.selectedLayerIdx))
         return state;
-
       const updated = state.layers.map((layer) => ({ ...layer }));
-      updated[action.payload.layerIdx] = {
-        ...updated[action.payload.layerIdx],
-        selection: {
-          ...updated[action.payload.layerIdx].selection,
-          ...action.payload.pselection,
-        },
-      };
-      const isCurrent = action.payload.layerIdx === state.selectedLayerIdx;
 
+      const selection = {
+        ...updated[action.payload.layerIdx].selection,
+        ...action.payload.pselection,
+      } satisfies LSelection
+
+      // update filter config to it's default value whenever we change filter
+      if (action.payload.pselection.filter
+        && action.payload.pselection.filter != updated[action.payload.layerIdx].selection.filter) {
+        selection.config = defaultConfig(selection.filter)
+      }
+
+      updated[action.payload.layerIdx] = {
+        ...updated[action.payload.layerIdx], selection,
+      };
+
+      const isCurrent = action.payload.layerIdx === state.selectedLayerIdx;
       const curr = updated[state.selectedLayerIdx];
       // update the area array on initial `present` value of layer's commands
       // since the initial value was an empty array
@@ -418,9 +444,10 @@ const storeReducer = (state: State, action: Action): State => {
               glitchedData[i] = wavBytes[i % wavBytes.length];
             }
 
+            const selection = state.currentLayer?.selection as LSelection<Filter.AsSound>;
+            const bitRateBlend = selection.config.blend;
             // re-apply back the distorted data and also blend it by 50/50 so we can still
             // see the original image just a bit
-            const bitRateBlend = 0.5;
             for (const { x, y, data: src } of points) {
               if (!src) continue;
               const localX = x - minX;
@@ -438,9 +465,25 @@ const storeReducer = (state: State, action: Action): State => {
             }
             break;
           }
+          case Filter.Brightness: {
+            const selection = state.currentLayer?.selection as LSelection<Filter.Grayscale>;
+            const intensity = selection.config.intensity
+            for (const { x, y, data: src } of points) {
+              if (!src) continue;
+              const localX = x - minX;
+              const localY = y - minY;
+              const index = (localY * width + localX) * 4;
+              data[index + 0] = src[0] * intensity;
+              data[index + 1] = src[1] * intensity;
+              data[index + 2] = src[2] * intensity;
+            }
+            break;
+          }
           case Filter.Tint:
             break;
           case Filter.Grayscale: {
+            const selection = state.currentLayer?.selection as LSelection<Filter.Grayscale>;
+            const intensity = selection.config.intensity;
             for (const { x, y, data: src } of points) {
               if (!src) continue;
               const avg = (src[0] + src[1] + src[2]) / 3;
@@ -450,9 +493,13 @@ const storeReducer = (state: State, action: Action): State => {
               const localY = y - minY;
               const index = (localY * width + localX) * 4;
 
-              data[index + 0] = avg;
-              data[index + 1] = avg;
-              data[index + 2] = avg;
+              const rOut = src[0] * (1 - intensity) + avg * intensity
+              const gOut = src[1] * (1 - intensity) + avg * intensity
+              const bOut = src[2] * (1 - intensity) + avg * intensity
+
+              data[index + 0] = rOut;
+              data[index + 1] = gOut;
+              data[index + 2] = bOut;
               data[index + 3] = alpha;
             }
             break;

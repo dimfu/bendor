@@ -20,8 +20,6 @@ function Selections() {
     dispatch({ type: StoreActionType.GenerateResult });
   };
 
-  // TODO: redrawing the image with filter applied on is kinda expensive, idk if we should
-  // keep it that way or not, just gonna disabled it atm
   const onChangeFilter = (idx: number, value: Filter) => {
     dispatch({
       type: StoreActionType.UpdateLayerSelection,
@@ -33,8 +31,8 @@ function Selections() {
         withUpdateInitialPresent: false,
       },
     });
-    // dispatch({ type: StoreActionType.ResetImageCanvas });
-    //   dispatch({ type: StoreActionType.GenerateResult });
+    dispatch({ type: StoreActionType.ResetImageCanvas });
+    dispatch({ type: StoreActionType.GenerateResult });
   };
 
   // clear selection by reverting back to selecting whole image as the area data
