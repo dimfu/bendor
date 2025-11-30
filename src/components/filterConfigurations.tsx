@@ -19,6 +19,7 @@ const RangeInput = ({ label, id, min, max, configKey, defaultValue, refresh = fa
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const onApply = () => {
+    dispatch({ type: StoreActionType.ResetImageCanvas });
     const value = parseFloat(inputRef.current?.value ?? defaultValue.toString());
     dispatch({
       type: StoreActionType.UpdateLayerSelection,
@@ -28,7 +29,6 @@ const RangeInput = ({ label, id, min, max, configKey, defaultValue, refresh = fa
         withUpdateInitialPresent: false,
       },
     });
-    dispatch({ type: StoreActionType.ResetImageCanvas });
     dispatch({ type: StoreActionType.GenerateResult, payload: { refresh } });
   };
 
@@ -105,21 +105,29 @@ const AsSoundConfig = () => {
 };
 
 const FractalPixelSortConfig = () => {
-  const { state } = useStore();
+  const { state, dispatch } = useStore();
   const { min, max } = FRACTAL_SORT_DISTORTION_RANGE;
   const currSelection = state.currentLayer?.selection as LSelection<Filter.FractalPixelSort>;
   const conf = currSelection.config;
 
   return (
-    <RangeInput
-      label="Distortion Intensity"
-      id="distortionIntensity"
-      min={min}
-      max={max}
-      configKey="intensity"
-      defaultValue={conf.intensity}
-      refresh
-    />
+    <div>
+      <RangeInput
+        label="Distortion Intensity"
+        id="distortionIntensity"
+        min={min}
+        max={max}
+        configKey="intensity"
+        defaultValue={conf.intensity}
+        refresh
+      />
+      <button onClick={() => {
+        dispatch({ type: StoreActionType.ResetImageCanvas });
+        dispatch({ type: StoreActionType.GenerateResult, payload: { refresh: true } });
+      }}>
+        Refresh Distortions
+      </button>
+    </div >
   );
 };
 

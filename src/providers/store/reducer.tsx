@@ -8,6 +8,7 @@ import {
   type State,
 } from "../../types";
 import Commands from "../../utils/commands";
+import { getAreaData } from "../../utils/image";
 import {
   applyAudioDistortions,
   audioSamplesToWAV,
@@ -375,41 +376,41 @@ const storeReducer = (state: State, action: Action): State => {
     }
 
     case StoreActionType.GenerateResult: {
-      // get all canvas from top to bottom
-      const canvases = state.layers.map(({ selection: { area, filter } }) => {
-        return {
-          area,
-          filter,
-        };
-      });
-
       const imageCanvas = state.imgCtx;
       if (!imageCanvas) {
         return state;
       }
 
-      canvases.forEach(({ area, filter }, idx) => {
-        let points = area.filter((p) => p.data);
-        if (points.length === 0) {
-          points = state.originalAreaData;
+      const updatedLayers = state.layers.map((layer) => {
+        const { area, filter } = layer.selection;
+        let updatedSelection = layer.selection;
+
+        // had to do this, because when user clicked on the image itself, it will counts as drawing
+        // but it dont provide the image area, so fallback to using whole image data (again)
+        if (area.length === 0) {
+          const selections = new Uint8Array(imageCanvas.canvas.width * imageCanvas.canvas.height);
+          selections.fill(1);
+          const newArea = getAreaData(imageCanvas, selections);
+          updatedSelection = {
+            ...layer.selection,
+            area: newArea,
+          };
         }
 
-        const [width, height, minX, minY] = getDimension(points);
-        const original = imageCanvas.getImageData(minX, minY, width, height);
-        const data = original.data;
+        const [width, minX, minY] = getDimension(updatedSelection.area);
 
         switch (filter) {
           case Filter.AsSound: {
+            const img = imageCanvas.getImageData(0, 0, imageCanvas.canvas.width, imageCanvas.canvas.height);
+            const data = img.data;
+
             const freqs: number[] = [];
             const amps: number[] = [];
             // some shit i dont fucking understand, but from what I understand it takes the
             // normalized RGB value and treat it as an amplitude
             // https://github.com/RecursiveVoid/pixeltonejs/blob/main/src/core/mappers/PixelToFrequencyMapper.ts
-            for (const { x, y, data: src } of points) {
-              if (!src) continue;
-              const localX = x - minX;
-              const localY = y - minY;
-              const index = (localY * width + localX) * 4;
+            for (const { x, y } of updatedSelection.area) {
+              const index = (y * imageCanvas.canvas.width + x) * 4;
               const rgb = normalizeRGB(
                 new Uint8Array([
                   data[index],
@@ -440,53 +441,46 @@ const storeReducer = (state: State, action: Action): State => {
               DEFAULT_DURATION,
               DEFAULT_SAMPLE_RATE
             );
-            if (!audioSamples) return;
+            if (!audioSamples) break;
+
             const distortedSamples = applyAudioDistortions(audioSamples);
             const wavBytes = audioSamplesToWAV(
               distortedSamples,
               DEFAULT_SAMPLE_RATE
             );
-            const glitchedData = new Uint8ClampedArray(width * height * 4);
-            for (let i = 0; i < glitchedData.length; i++) {
-              glitchedData[i] = wavBytes[i % wavBytes.length];
-            }
 
-            const selection = state.layers[idx].selection as LSelection<Filter.AsSound>;
+            const selection = layer.selection as LSelection<Filter.AsSound>;
             const bitRateBlend = selection.config.blend;
-            // re-apply back the distorted data and also blend it by 50/50 so we can still
-            // see the original image just a bit
-            for (const { x, y, data: src } of points) {
-              if (!src) continue;
+            for (const { x, y } of updatedSelection.area) {
+              const index = (y * imageCanvas.canvas.width + x) * 4;
               const localX = x - minX;
               const localY = y - minY;
-              const index = (localY * width + localX) * 4;
+              const localIndex = (localY * width + localX) * 4;
+              const glitchedValue = wavBytes[localIndex % wavBytes.length];
               data[index] =
                 data[index] * (1 - bitRateBlend) +
-                glitchedData[index] * bitRateBlend; // R
+                glitchedValue * bitRateBlend; // R
               data[index + 1] =
                 data[index + 1] * (1 - bitRateBlend) +
-                glitchedData[index + 1] * bitRateBlend; // G
+                glitchedValue * bitRateBlend; // G
               data[index + 2] =
                 data[index + 2] * (1 - bitRateBlend) +
-                glitchedData[index + 2] * bitRateBlend; // B
+                glitchedValue * bitRateBlend; // B
             }
+
+            imageCanvas.putImageData(img, 0, 0);
             break;
           }
 
           case Filter.FractalPixelSort: {
-            const selection = state.layers[idx].selection as LSelection<Filter.FractalPixelSort>;
+            const selection = layer.selection as LSelection<Filter.FractalPixelSort>;
             const distortionAmount = selection.config.intensity;
-
             let tempData: Uint8ClampedArray<ArrayBuffer>;
 
             if (selection.config.distortedData.length === 0 || action.payload?.refresh) {
-              // draw previous mutated image data from applied filters
-              imageCanvas.putImageData(original, minX, minY);
-              // get the new whole image data in order it to get distorted
               const wholeImage = imageCanvas.getImageData(0, 0, imageCanvas.canvas.width, imageCanvas.canvas.height);
-              const wiData = wholeImage.data;
-              tempData = new Uint8ClampedArray(wiData);
-              // distort whole image and store it inside temp
+              tempData = new Uint8ClampedArray(wholeImage.data);
+
               for (let i = tempData.length - 1; i > 0; i--) {
                 if (tempData[(i * distortionAmount) % tempData.length] < tempData[i]) {
                   tempData[i] = tempData[(i * distortionAmount) % tempData.length];
@@ -495,17 +489,15 @@ const storeReducer = (state: State, action: Action): State => {
 
               const fullWidth = imageCanvas.canvas.width;
               const fullHeight = imageCanvas.canvas.height;
-              // shifts pixel data
               const leftSide = Math.round(Math.random() * (fullWidth - 10) + 10);
               const rightSide = Math.round(Math.random() * (fullWidth - 10) + leftSide);
+
               for (let i = 0; i < fullHeight; i++) {
                 for (let j = 0; j < fullWidth; j++) {
                   const pixelCanvasPosition = (j + i * fullWidth) * 4;
-
                   const currentR = tempData[pixelCanvasPosition];
                   const currentG = tempData[pixelCanvasPosition + 1];
                   const currentB = tempData[pixelCanvasPosition + 2];
-
                   const shiftDirection = Math.floor(Math.random() * 2);
 
                   if (shiftDirection === 0) {
@@ -543,41 +535,53 @@ const storeReducer = (state: State, action: Action): State => {
                   }
                 }
               }
-              selection.config.distortedData = tempData;
+
+              updatedSelection = {
+                ...updatedSelection,
+                config: {
+                  ...selection.config,
+                  distortedData: tempData
+                }
+              } as LSelection<Filter.FractalPixelSort>;
             } else {
               tempData = selection.config.distortedData;
             }
 
-            // copy pixel data from the shifted pixel data temp to the selected pixel
-            // inbound coordinate
+            const wholeImage = imageCanvas.getImageData(0, 0, imageCanvas.canvas.width, imageCanvas.canvas.height);
+            const data = wholeImage.data;
             const fullWidth = imageCanvas.canvas.width;
-            for (const { x, y } of points) {
-              const localX = x - minX;
-              const localY = y - minY;
-              if (localX < 0 || localX >= width || localY < 0 || localY >= height) continue;
-              const index = (localY * width + localX) * 4;
-              const absIdx = (y * fullWidth + x) * 4;
 
-              // take the pixel data from the distorted image data
-              data[index] = tempData[absIdx];         // R
-              data[index + 1] = tempData[absIdx + 1]; // G
-              data[index + 2] = tempData[absIdx + 2]; // B
+            for (const { x, y } of updatedSelection.area) {
+              const absIdx = (y * fullWidth + x) * 4;
+              data[absIdx] = tempData[absIdx];
+              data[absIdx + 1] = tempData[absIdx + 1];
+              data[absIdx + 2] = tempData[absIdx + 2];
             }
+
+            imageCanvas.putImageData(wholeImage, 0, 0);
             break;
           }
 
           case Filter.Brightness: {
-            const selection = state.layers[idx].selection as LSelection<Filter.Brightness>;
-            const intensity = selection.config.intensity
-            for (const { x, y, data: src } of points) {
-              if (!src) continue;
-              const localX = x - minX;
-              const localY = y - minY;
-              const index = (localY * width + localX) * 4;
-              data[index + 0] = src[0] * intensity;
-              data[index + 1] = src[1] * intensity;
-              data[index + 2] = src[2] * intensity;
+            const wholeImage = imageCanvas.getImageData(0, 0, imageCanvas.canvas.width, imageCanvas.canvas.height);
+            const data = wholeImage.data;
+            const fullWidth = imageCanvas.canvas.width;
+
+            const selection = layer.selection as LSelection<Filter.Brightness>;
+            const intensity = selection.config.intensity;
+
+            for (const { x, y } of updatedSelection.area) {
+              const index = (y * fullWidth + x) * 4;
+              const currentR = data[index + 0];
+              const currentG = data[index + 1];
+              const currentB = data[index + 2];
+
+              data[index + 0] = currentR * intensity;
+              data[index + 1] = currentG * intensity;
+              data[index + 2] = currentB * intensity;
             }
+
+            imageCanvas.putImageData(wholeImage, 0, 0);
             break;
           }
 
@@ -585,35 +589,49 @@ const storeReducer = (state: State, action: Action): State => {
             break;
 
           case Filter.Grayscale: {
-            const selection = state.layers[idx].selection as LSelection<Filter.Grayscale>;
+            const wholeImage = imageCanvas.getImageData(0, 0, imageCanvas.canvas.width, imageCanvas.canvas.height);
+            const data = wholeImage.data;
+            const fullWidth = imageCanvas.canvas.width;
+
+            const selection = layer.selection as LSelection<Filter.Grayscale>;
             const intensity = selection.config.intensity;
-            for (const { x, y, data: src } of points) {
-              if (!src) continue;
-              const avg = (src[0] + src[1] + src[2]) / 3;
-              const alpha = src[3];
 
-              const localX = x - minX;
-              const localY = y - minY;
-              const index = (localY * width + localX) * 4;
 
-              const rOut = src[0] * (1 - intensity) + avg * intensity
-              const gOut = src[1] * (1 - intensity) + avg * intensity
-              const bOut = src[2] * (1 - intensity) + avg * intensity
+            for (const { x, y } of updatedSelection.area) {
+              const index = (y * fullWidth + x) * 4;
+
+              const currentR = data[index + 0];
+              const currentG = data[index + 1];
+              const currentB = data[index + 2];
+              const alpha = data[index + 3];
+
+              const avg = (currentR + currentG + currentB) / 3;
+
+              const rOut = currentR * (1 - intensity) + avg * intensity;
+              const gOut = currentG * (1 - intensity) + avg * intensity;
+              const bOut = currentB * (1 - intensity) + avg * intensity;
 
               data[index + 0] = rOut;
               data[index + 1] = gOut;
               data[index + 2] = bOut;
               data[index + 3] = alpha;
             }
+
+            imageCanvas.putImageData(wholeImage, 0, 0);
             break;
           }
+
           default:
             break;
         }
-        imageCanvas.putImageData(original, minX, minY);
+
+        return {
+          ...layer,
+          selection: updatedSelection
+        };
       });
 
-      return { ...state };
+      return { ...state, layers: updatedLayers };
     }
 
     case StoreActionType.ResetImageCanvas: {

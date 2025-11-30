@@ -1,46 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ColorChannel, Layer, Point } from "../types";
+import type { Layer, Point } from "../types";
 import { useStore } from "../hooks/useStore";
 import { StoreActionType } from "../providers/store/reducer";
 import { useLoading } from "../hooks/useLoading";
-
-// retrieve pixel data from area inside the selection points
-function getAreaData(
-  ctx: CanvasRenderingContext2D,
-  selectionMask: Uint8Array
-): Point[] {
-  const { data, width } = ctx.getImageData(
-    0,
-    0,
-    ctx.canvas.width,
-    ctx.canvas.height
-  );
-
-  const result: Point[] = [];
-
-  for (let index = 0; index < selectionMask.length; index++) {
-    if (selectionMask[index] === 0) continue;
-
-    const x = index % width;
-    const y = Math.floor(index / width);
-
-    const pixelOffset = index * 4;
-    const channel = new Uint8Array([
-      data[pixelOffset],
-      data[pixelOffset + 1],
-      data[pixelOffset + 2],
-      data[pixelOffset + 3]
-    ]) as ColorChannel;
-
-    result.push({
-      x,
-      y,
-      data: channel
-    });
-  }
-
-  return result;
-}
+import { getAreaData } from "../utils/image";
 
 function isPointInPolygon(point: Point, polygon: Point[]): boolean {
   let inside = false;
@@ -268,6 +231,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
         );
         start();
         requestIdleCallback(() => {
+          dispatch({ type: StoreActionType.ResetImageCanvas });
           selectArea(pointsRef.current, activeCanvas);
           dispatch({
             type: StoreActionType.SetPointsToLayer,
@@ -287,7 +251,6 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
               withUpdateInitialPresent: true,
             },
           });
-          dispatch({ type: StoreActionType.ResetImageCanvas });
           dispatch({ type: StoreActionType.GenerateResult });
           stop();
         })
@@ -489,11 +452,17 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
           pselection: { ctx },
         },
       });
+
+      const imageCanvas = imageCanvasRef.current;
+      const imageCtx = imageCanvas?.getContext("2d");
+      if (!imageCtx) return;
+      const area = getAreaData(imageCtx, areaRef.current!);
+
       dispatch({
         type: StoreActionType.UpdateLayerSelection,
         payload: {
           layerIdx: state.selectedLayerIdx,
-          pselection: { area: state.originalAreaData },
+          pselection: { area },
           withUpdateInitialPresent: false,
         },
       });
