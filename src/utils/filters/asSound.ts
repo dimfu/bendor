@@ -1,4 +1,4 @@
-import type { Filter, FilterFunction, LSelection, Point } from "../../types"
+import type { Filter, FilterFunction, LSelection, Point } from "~/types"
 import { getAreaData } from "../image"
 import {
   applyAudioDistortions,

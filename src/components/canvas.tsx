@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import type { Layer, Point } from "../types"
-import { useStore } from "../hooks/useStore"
-import { StoreActionType } from "../providers/store/reducer"
-import { useLoading } from "../hooks/useLoading"
-import { getAreaData } from "../utils/image"
+import type { Layer, Point } from "~/types"
+import { useStore } from "~/hooks/useStore"
+import { StoreActionType } from "~/providers/store/reducer"
+import { useLoading } from "~/hooks/useLoading"
+import { getAreaData } from "~/utils/image"
 
 function isPointInPolygon(point: Point, polygon: Point[]): boolean {
   let inside = false

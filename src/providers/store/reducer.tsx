@@ -1,8 +1,7 @@
-import { Filter, type FilterConfigMap, type Layer, type LSelection, type State } from "../../types"
-import { Color } from "../../utils/color"
-import Commands from "../../utils/commands"
-import { filterFnRegistry } from "../../utils/filters/registry"
-import { getAreaData } from "../../utils/image"
+import { Filter, type FilterConfigMap, type Layer, type LSelection, type State } from "~/types"
+import Commands from "~/utils/commands"
+import { filterFnRegistry } from "~/utils/filters/registry"
+import { getAreaData } from "~/utils/image"
 import { initialStoreState } from "./storeState"
 
 export enum StoreActionType {
@@ -385,11 +384,10 @@ const storeReducer = (state: State, action: Action): State => {
       for (const { x, y, data: src } of state.originalAreaData) {
         if (!src) continue
         const index = (y * imageCanvas.canvas.width + x) * 4
-        const { red, blue, green, alpha } = new Color(data.slice(index, index + 4))
-        data[index + 0] = red
-        data[index + 1] = green
-        data[index + 2] = blue
-        data[index + 3] = alpha
+        data[index + 0] = src[0]
+        data[index + 1] = src[1]
+        data[index + 2] = src[2]
+        data[index + 3] = src[3]
       }
       imageCanvas.putImageData(original, 0, 0)
       return state

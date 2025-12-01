@@ -1,4 +1,4 @@
-import type { Filter, FilterFunction, LSelection, Point } from "../../types"
+import type { Filter, FilterFunction, LSelection, Point } from "~/types"
 import { Color } from "../color"
 
 export const fractalPixelSortFilter: FilterFunction = ({ imageCanvas, layer, area, refresh }) => {

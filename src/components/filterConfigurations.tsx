@@ -1,13 +1,13 @@
 import { useRef, type JSX } from "react"
-import { useStore } from "../hooks/useStore"
-import { Filter, type LSelection } from "../types"
+import { useStore } from "~/hooks/useStore"
+import { Filter, type LSelection } from "~/types"
 import {
   BRIGHTNESS_INTENSITY_RANGE,
   FRACTAL_SORT_DISTORTION_RANGE,
   GRAYSCALE_INTENSITY_RANGE,
   SOUND_BIT_RATE_BLEND_RANGE
-} from "../constants"
-import { StoreActionType } from "../providers/store/reducer"
+} from "~/constants"
+import { StoreActionType } from "~/providers/store/reducer"
 
 interface RangeInputProps {
   label: string

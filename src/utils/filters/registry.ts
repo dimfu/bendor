@@ -1,4 +1,4 @@
-import { Filter, type FilterFunction } from "../../types"
+import { Filter, type FilterFunction } from "~/types"
 import { asSoundFilter } from "./asSound"
 import { brightnessFilter } from "./brightness"
 import { fractalPixelSortFilter } from "./fractalPixelSort"

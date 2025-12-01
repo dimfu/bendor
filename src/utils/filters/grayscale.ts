@@ -1,4 +1,4 @@
-import type { Filter, FilterFunction, LSelection } from "../../types"
+import type { Filter, FilterFunction, LSelection } from "~/types"
 import { Color } from "../color"
 
 export const grayscaleFilter: FilterFunction = ({ imageCanvas, layer, area }) => {

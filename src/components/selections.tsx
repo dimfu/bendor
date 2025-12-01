@@ -1,8 +1,8 @@
-import { useLoading } from "../hooks/useLoading"
-import { useStore } from "../hooks/useStore"
-import { StoreActionType } from "../providers/store/reducer"
-import { Filter } from "../types"
-import { filterNameRegistry } from "../utils/filters/registry"
+import { useLoading } from "~/hooks/useLoading"
+import { useStore } from "~/hooks/useStore"
+import { StoreActionType } from "~/providers/store/reducer"
+import { Filter } from "~/types"
+import { filterNameRegistry } from "~/utils/filters/registry"
 
 function Selections() {
   const { loading } = useLoading()
