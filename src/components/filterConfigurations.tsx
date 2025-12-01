@@ -8,6 +8,8 @@ import {
   SOUND_BIT_RATE_BLEND_RANGE
 } from "~/constants"
 import { StoreActionType } from "~/providers/store/reducer"
+import { useLoading } from "~/hooks/useLoading"
+import { flushSync } from "react-dom"
 
 interface RangeInputProps {
   label: string
@@ -28,10 +30,14 @@ const RangeInput = ({
   defaultValue,
   refresh = false
 }: RangeInputProps) => {
+  const { loading, start, stop } = useLoading()
   const { state, dispatch } = useStore()
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   const onApply = () => {
+    flushSync(() => {
+      start()
+    })
     dispatch({ type: StoreActionType.ResetImageCanvas })
     const value = parseFloat(inputRef.current?.value ?? defaultValue.toString())
     dispatch({
@@ -43,12 +49,14 @@ const RangeInput = ({
       }
     })
     dispatch({ type: StoreActionType.GenerateResult, payload: { refresh } })
+    stop()
   }
 
   return (
     <div>
       <label htmlFor={id}>{label}</label>
       <input
+        disabled={loading}
         ref={inputRef}
         onMouseUp={onApply}
         onTouchEnd={onApply}
@@ -114,7 +122,6 @@ const AsSoundConfig = () => {
         max={max}
         configKey="blend"
         defaultValue={conf.blend}
-        refresh
       />
     </div>
   )

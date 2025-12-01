@@ -4,6 +4,7 @@ import { useStore } from "~/hooks/useStore"
 import { StoreActionType } from "~/providers/store/reducer"
 import { useLoading } from "~/hooks/useLoading"
 import { getAreaData } from "~/utils/image"
+import { flushSync } from "react-dom"
 
 function isPointInPolygon(point: Point, polygon: Point[]): boolean {
   let inside = false
@@ -215,7 +216,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
           startPointRef.current,
           state.currentLayer!.color
         )
-        start()
+        flushSync(() => start())
         requestIdleCallback(() => {
           dispatch({ type: StoreActionType.ResetImageCanvas })
           selectArea(pointsRef.current, activeCanvas)
@@ -435,6 +436,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       const imageCanvas = imageCanvasRef.current
       const imageCtx = imageCanvas?.getContext("2d")
       if (!imageCtx) return
+      console.log(areaRef.current?.length)
       const emptySelection = new Uint8Array()
       const area = getAreaData(imageCtx, emptySelection)
 

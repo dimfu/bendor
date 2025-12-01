@@ -5,7 +5,7 @@ import { Filter } from "~/types"
 import { filterNameRegistry } from "~/utils/filters/registry"
 
 function Selections() {
-  const { loading } = useLoading()
+  const { loading, start, stop } = useLoading()
   const { state, dispatch } = useStore()
   const filterList = Object.keys(Filter)
 
@@ -16,12 +16,15 @@ function Selections() {
   }
 
   const onDeleteLayer = (idx: number) => {
+    start()
     dispatch({ type: StoreActionType.DeleteLayer, payload: idx })
     dispatch({ type: StoreActionType.ResetImageCanvas })
     dispatch({ type: StoreActionType.GenerateResult })
+    stop()
   }
 
   const onChangeFilter = (idx: number, value: Filter) => {
+    start()
     dispatch({
       type: StoreActionType.UpdateLayerSelection,
       payload: {
@@ -32,10 +35,23 @@ function Selections() {
         withUpdateInitialPresent: false
       }
     })
+    stop()
+  }
+
+  const onMoveSelection = (direction: "up" | "down", idx: number) => {
+    start()
+    dispatch({
+      type: StoreActionType.MoveLayer,
+      payload: { direction, layerIdx: idx }
+    })
+    dispatch({ type: StoreActionType.ResetImageCanvas })
+    dispatch({ type: StoreActionType.GenerateResult })
+    stop()
   }
 
   // clear selection by reverting back to selecting whole image as the area data
   const onClearSelection = () => {
+    start()
     dispatch({
       type: StoreActionType.SetPointsToLayer,
       payload: { points: [], start: { x: 0, y: 0 } }
@@ -44,12 +60,13 @@ function Selections() {
       type: StoreActionType.UpdateLayerSelection,
       payload: {
         layerIdx: state.selectedLayerIdx,
-        pselection: { area: state.originalAreaData },
+        pselection: { area: state.originalAreaData, config: {} },
         withUpdateInitialPresent: false
       }
     })
     dispatch({ type: StoreActionType.ResetImageCanvas })
     dispatch({ type: StoreActionType.GenerateResult })
+    stop()
   }
 
   return (
@@ -73,26 +90,8 @@ function Selections() {
             </button>
             <button onClick={onClearSelection}>Clear Selection</button>
             <button onClick={() => onDeleteLayer(idx)}>Delete</button>
-            <button
-              onClick={() =>
-                dispatch({
-                  type: StoreActionType.MoveLayer,
-                  payload: { direction: "up", layerIdx: idx }
-                })
-              }
-            >
-              Up
-            </button>
-            <button
-              onClick={() =>
-                dispatch({
-                  type: StoreActionType.MoveLayer,
-                  payload: { direction: "down", layerIdx: idx }
-                })
-              }
-            >
-              Down
-            </button>
+            <button onClick={() => onMoveSelection("up", idx)}>Up</button>
+            <button onClick={() => onMoveSelection("down", idx)}>Down</button>
           </li>
         ))}
       </ul>

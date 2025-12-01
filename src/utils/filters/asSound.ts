@@ -11,14 +11,14 @@ import {
   rgbToUnitRange
 } from "../sound"
 
-export const asSoundFilter: FilterFunction = ({ imageCanvas, layer, area, refresh }) => {
+export const asSoundFilter: FilterFunction = ({ imageCanvas, layer, area }) => {
   const selection = layer.selection as LSelection<Filter.AsSound>
   const img = imageCanvas.getImageData(0, 0, imageCanvas.canvas.width, imageCanvas.canvas.height)
   const data = img.data
 
   let cache: Uint8ClampedArray
 
-  if (selection.config.cache.length === 0 || refresh) {
+  if (selection.config.cache.length === 0) {
     cache = generateSoundCache(imageCanvas, data)
   } else {
     cache = selection.config.cache
