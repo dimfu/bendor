@@ -3,7 +3,7 @@ import type Commands from "./utils/commands"
 export type Point = {
   x: number
   y: number
-  data?: ColorChannel
+  data?: Uint8Array
 }
 
 export enum Filter {
@@ -87,4 +87,15 @@ export interface LoadingState {
   setLoading: unknown
 }
 
-export type ColorChannel = Uint8Array & { readonly length: 4 }
+export interface FilterContext {
+  imageCanvas: CanvasRenderingContext2D
+  layer: Layer
+  area: Point[]
+  refresh?: boolean
+}
+
+export interface FilterResult {
+  updatedSelection: LSelection
+}
+
+export type FilterFunction = (ctx: FilterContext) => FilterResult

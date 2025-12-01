@@ -1,5 +1,3 @@
-import type { ColorChannel } from "../types"
-
 const DEFAULT_SAMPLE_RATE = 44100
 const DEFAULT_DURATION = 0.01
 const DEFAULT_RGB_FREQUENCY_RANGES = {
@@ -15,7 +13,7 @@ type FrequencyMapperOptions = {
 
 // since audio processing are typically in range of -1 to 1, I had to make this function so that
 // the image data value are easier to work on when converting it to audio format
-const normalizeRGB = (channel: ColorChannel) => {
+const rgbToUnitRange = (channel: Uint8Array) => {
   const [r, g, b, a] = channel
   return [r / 255, g / 255, b / 255, a]
 }
@@ -128,7 +126,7 @@ export {
   DEFAULT_SAMPLE_RATE,
   DEFAULT_DURATION,
   DEFAULT_RGB_FREQUENCY_RANGES,
-  normalizeRGB,
+  rgbToUnitRange,
   audioSamplesToWAV,
   mapFrequencies,
   generateAsSineWave,

@@ -1,4 +1,4 @@
-import type { ColorChannel, Point } from "../types"
+import type { Point } from "../types"
 
 // retrieve pixel data from area inside the selection points
 export const getAreaData = (ctx: CanvasRenderingContext2D, selectionMask: Uint8Array): Point[] => {
@@ -18,7 +18,7 @@ export const getAreaData = (ctx: CanvasRenderingContext2D, selectionMask: Uint8A
       data[pixelOffset + 1],
       data[pixelOffset + 2],
       data[pixelOffset + 3]
-    ]) as ColorChannel
+    ])
 
     result.push({
       x,

@@ -2,6 +2,7 @@ import { useLoading } from "../hooks/useLoading"
 import { useStore } from "../hooks/useStore"
 import { StoreActionType } from "../providers/store/reducer"
 import { Filter } from "../types"
+import { filterNameRegistry } from "../utils/filters/registry"
 
 function Selections() {
   const { loading } = useLoading()
@@ -62,7 +63,9 @@ function Selections() {
               value={point.selection.filter}
             >
               {filterList.map((filter) => (
-                <option key={`filter-${idx}-${filter}`}>{filter}</option>
+                <option value={filter} key={`filter-${idx}-${filter}`}>
+                  {filterNameRegistry[filter as Filter]}
+                </option>
               ))}
             </select>
             <button onClick={() => dispatch({ type: StoreActionType.SelectLayer, payload: idx })}>
