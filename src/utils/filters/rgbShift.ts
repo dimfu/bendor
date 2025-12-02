@@ -1,5 +1,5 @@
-import type { Filter, FilterFunction, LSelection } from "~/types";
-import { Color } from "../color";
+import type { Filter, FilterFunction, LSelection } from "~/types"
+import { Color } from "../color"
 
 export const rgbShift: FilterFunction = ({ imageCanvas, layer, area }) => {
   const selection = layer.selection as LSelection<Filter.RGBShift>
@@ -22,7 +22,7 @@ export const rgbShift: FilterFunction = ({ imageCanvas, layer, area }) => {
     if (selection.config.effect === "Vibrance") {
       const max = Math.max(red, green, blue)
       const avg = (red + green + blue) / 3
-      const amt = ((Math.abs(max - avg) * 2 / 255) * -intensity) / 100
+      const amt = (((Math.abs(max - avg) * 2) / 255) * -intensity) / 100
       if (red !== max) {
         data[index] = red + (max - red) * amt
       }

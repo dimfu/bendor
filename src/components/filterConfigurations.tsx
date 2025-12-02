@@ -5,6 +5,8 @@ import {
   BRIGHTNESS_INTENSITY_RANGE,
   FRACTAL_SORT_DISTORTION_RANGE,
   GRAYSCALE_INTENSITY_RANGE,
+  PIXEL_SORT_DIRECTIONS,
+  PIXEL_SORT_INTENSITY,
   RGB_SHIFT_INTENSITY_RANGE,
   RGB_SHIFT_OPTIONS,
   SOUND_BIT_RATE_BLEND_RANGE
@@ -120,7 +122,7 @@ const ListSelection = <T, V = T>({
     stop()
   }
 
-  const selectedIndex = items.findIndex(item => {
+  const selectedIndex = items.findIndex((item) => {
     const itemValue = getItemValue ? getItemValue(item) : item
     const currentValue = getItemValue ? getItemValue(selectedValue) : selectedValue
     return itemValue === currentValue
@@ -135,7 +137,7 @@ const ListSelection = <T, V = T>({
         onChange={onSelect}
         disabled={loading}
         style={{
-          cursor: loading ? 'not-allowed' : 'pointer',
+          cursor: loading ? "not-allowed" : "pointer",
           opacity: loading ? 0.5 : 1
         }}
       >
@@ -265,6 +267,34 @@ const RGBShiftConfig = () => {
   )
 }
 
+const PixelSortConfig = () => {
+  const { state } = useStore()
+  const { min, max } = PIXEL_SORT_INTENSITY
+  const currSelection = state.currentLayer?.selection as LSelection<Filter.PixelSort>
+  const conf = currSelection.config
+  return (
+    <div>
+      <ListSelection
+        label="Sort Direction"
+        id="pixelSortDirection"
+        items={PIXEL_SORT_DIRECTIONS}
+        configKey="direction"
+        defaultValue="Vertical"
+        getItemValue={(item) => item}
+        refresh
+      />
+      <RangeInput
+        label="Intensity"
+        id="pixelSortIntensity"
+        min={min}
+        max={max}
+        configKey="intensity"
+        defaultValue={conf.intensity}
+        refresh
+      />
+    </div>
+  )
+}
 
 const ConfigElements = (filter?: Filter): JSX.Element => {
   if (!filter) {
@@ -283,6 +313,8 @@ const ConfigElements = (filter?: Filter): JSX.Element => {
       return <AsSoundConfig />
     case Filter.FractalPixelSort:
       return <FractalPixelSortConfig />
+    case Filter.PixelSort:
+      return <PixelSortConfig />
   }
 }
 

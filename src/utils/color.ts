@@ -36,4 +36,28 @@ export class Color {
   normalizeRGBValue = (n: number) => {
     return Math.min(255, Math.max(0, n))
   }
+
+  brightness() {
+    const r = this.red / 255.0
+    const g = this.green / 255.0
+    const b = this.blue / 255.0
+
+    let max, min: number
+    max = r
+    min = r
+    if (g > max) {
+      max = g
+    }
+    if (b > max) {
+      max = b
+    }
+    if (g < min) {
+      min = g
+    }
+    if (b < min) {
+      min = b
+    }
+
+    return (max + min) / 2
+  }
 }

@@ -1,4 +1,4 @@
-import type { RGB_SHIFT_OPTIONS } from "./constants"
+import type { PIXEL_SORT_DIRECTIONS, RGB_SHIFT_OPTIONS } from "./constants"
 import type Commands from "./utils/commands"
 
 export type Point = {
@@ -8,12 +8,13 @@ export type Point = {
 }
 
 export enum Filter {
+  None = "None",
+  PixelSort = "PixelSort",
   AsSound = "AsSound",
   FractalPixelSort = "FractalPixelSort",
   Brightness = "Brightness",
   RGBShift = "RGBShift",
-  Grayscale = "Grayscale",
-  None = "None"
+  Grayscale = "Grayscale"
 }
 
 interface AsSoundConfig {
@@ -39,6 +40,12 @@ export interface RGBShiftConfig {
   intensity: number
 }
 
+interface PixelSortConfig {
+  cache: Uint8ClampedArray<ArrayBuffer>
+  direction: (typeof PIXEL_SORT_DIRECTIONS)[number]
+  intensity: number
+}
+
 interface NoConfig {
   _empty?: true
 }
@@ -50,6 +57,7 @@ export type FilterConfigMap = {
   [Filter.RGBShift]: RGBShiftConfig
   [Filter.Grayscale]: GrayscaleConfig
   [Filter.None]: NoConfig
+  [Filter.PixelSort]: PixelSortConfig
 }
 
 export interface LSelection<F extends Filter = Filter> {

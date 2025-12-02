@@ -120,10 +120,11 @@ const defaultConfig = <F extends Filter>(filter: F): FilterConfigMap[F] => {
     [Filter.FractalPixelSort]: { intensity: 6.0, cache: new Uint8ClampedArray() },
     [Filter.Brightness]: { intensity: 1.0 },
     [Filter.RGBShift]: { intensity: 5.0, effect: "Vibrance" },
-    [Filter.Grayscale]: { intensity: 1.0 }
-  } satisfies FilterConfigMap;
+    [Filter.Grayscale]: { intensity: 1.0 },
+    [Filter.PixelSort]: { cache: new Uint8ClampedArray(), intensity: 1.0, direction: "Vertical" }
+  } satisfies FilterConfigMap
 
-  return configs[filter];
+  return configs[filter]
 }
 
 const storeReducer = (state: State, action: Action): State => {
