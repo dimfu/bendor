@@ -1,5 +1,6 @@
 {
   "name": "bendor",
+  "homepage": "https://dimfu.github.io/bendor/",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,8 +10,7 @@
     "format": "biome format --write .",
     "lint": "biome check .",
     "lint:ci": "biome ci .",
-    "lint:fix": "biome check --write --unsafe .",
-    "preview": "vite preview"
+    "lint:fix": "biome check --write --unsafe ."
   },
   "dependencies": {
     "react": "^19.1.1",

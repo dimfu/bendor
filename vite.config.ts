@@ -11,5 +11,6 @@ export default defineConfig({
         plugins: [["babel-plugin-react-compiler"]]
       }
     })
-  ]
+  ],
+  base: "/bendor/"
 })
