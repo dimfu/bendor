@@ -416,26 +416,18 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       })
     }
 
-    activeCanvas.addEventListener("mousedown", handleMouseDown)
-    activeCanvas.addEventListener("mousemove", handleMouseMove)
-    activeCanvas.addEventListener("mouseup", handleMouseUp)
-    activeCanvas.addEventListener("touchstart", handleTouchStart)
-    activeCanvas.addEventListener("touchmove", handleTouchMove)
-    activeCanvas.addEventListener("touchend", handleTouchEnd)
-    activeCanvas.addEventListener("touchcancel", handleTouchCancel)
-    activeCanvas.addEventListener("mouseout", handleMouseOut)
+    const ctrl = new AbortController()
+    activeCanvas.addEventListener("mousedown", handleMouseDown, ctrl)
+    activeCanvas.addEventListener("mousemove", handleMouseMove, ctrl)
+    activeCanvas.addEventListener("mouseup", handleMouseUp, ctrl)
+    activeCanvas.addEventListener("touchstart", handleTouchStart, ctrl)
+    activeCanvas.addEventListener("touchmove", handleTouchMove, ctrl)
+    activeCanvas.addEventListener("touchend", handleTouchEnd, ctrl)
+    activeCanvas.addEventListener("touchcancel", handleTouchCancel, ctrl)
+    activeCanvas.addEventListener("mouseout", handleMouseOut, ctrl)
 
     return () => {
-      activeCanvas.removeEventListener("mousedown", handleMouseDown)
-      activeCanvas.removeEventListener("mousemove", handleMouseMove)
-      activeCanvas.removeEventListener("mouseup", handleMouseUp)
-      activeCanvas.removeEventListener("touchstart", handleTouchStart)
-      activeCanvas.removeEventListener("touchmove", handleTouchMove)
-      activeCanvas.removeEventListener("touchend", handleTouchEnd)
-      activeCanvas.removeEventListener("touchcancel", handleTouchCancel)
-      activeCanvas.removeEventListener("mouseout", handleMouseOut)
-      document.removeEventListener("mousemove", handleMouseMoveOutside)
-      document.removeEventListener("mouseup", handleMouseUpOutside)
+      ctrl.abort()
     }
   }, [
     ongoingTouches,

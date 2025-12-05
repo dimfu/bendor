@@ -13,18 +13,24 @@ import {
 
 export const asSoundFilter: FilterFunction = ({ imageCanvas, layer, area }) => {
   const selection = layer.selection as LSelection<Filter.AsSound>
-  const img = imageCanvas.getImageData(0, 0, imageCanvas.canvas.width, imageCanvas.canvas.height)
+  const { width, height } = imageCanvas.canvas
+  const img = imageCanvas.getImageData(0, 0, width, height)
   const data = img.data
+
+  // use the whole image data to generate the sound
+  const selections = new Uint8Array(width * height)
+  selections.fill(1)
 
   let cache: Uint8ClampedArray
 
   if (selection.config.cache.length === 0) {
-    cache = generateSoundCache(imageCanvas, data)
+    const newArea = getAreaData(imageCanvas, selections)
+    cache = generateSoundCache(data, newArea, width, height)
   } else {
     cache = selection.config.cache
   }
 
-  applyFilter(data, cache, area, imageCanvas.canvas.width, selection.config.blend)
+  applyFilter(data, cache, area, width, selection.config.blend)
   imageCanvas.putImageData(img, 0, 0)
 
   return {
@@ -36,22 +42,18 @@ export const asSoundFilter: FilterFunction = ({ imageCanvas, layer, area }) => {
 }
 
 const generateSoundCache = (
-  imageCanvas: CanvasRenderingContext2D,
-  data: Uint8ClampedArray
+  data: Uint8ClampedArray,
+  area: Point[],
+  width: number,
+  height: number
 ): Uint8ClampedArray => {
   const freqs: number[] = []
   const amps: number[] = []
-
-  // use the whole image data to generate the sound
-  const selections = new Uint8Array(imageCanvas.canvas.width * imageCanvas.canvas.height)
-  selections.fill(1)
-  const newArea = getAreaData(imageCanvas, selections)
-
   // some shit i dont fucking understand, but from what I understand it takes the
   // normalized RGB value and treat it as an amplitude
   // https://github.com/RecursiveVoid/pixeltonejs/blob/main/src/core/mappers/PixelToFrequencyMapper.ts
-  for (const { x, y } of newArea) {
-    const index = (y * imageCanvas.canvas.width + x) * 4
+  for (const { x, y } of area) {
+    const index = (y * width + x) * 4
     const rgb = rgbToUnitRange(new Uint8Array([data[index], data[index + 1], data[index + 2]]))
 
     mapFrequencies([
@@ -69,11 +71,16 @@ const generateSoundCache = (
   const sampledDistortions = applyAudioDistortions(audioSamples)
   const wavBytes = audioSamplesToWAV(sampledDistortions, DEFAULT_SAMPLE_RATE)
 
-  const cache = new Uint8ClampedArray(imageCanvas.canvas.width * imageCanvas.canvas.height * 4)
-  for (let i = 0; i < cache.length; i++) {
-    cache[i] = wavBytes[i % wavBytes.length]
+  const cache = new Uint8ClampedArray(width * height * 4)
+  const chunkSize = wavBytes.length
+  for (let i = 0; i < cache.length; i += chunkSize) {
+    const remaining = cache.length - i
+    if (remaining >= chunkSize) {
+      cache.set(wavBytes, i)
+    } else {
+      cache.set(wavBytes.subarray(0, remaining), i)
+    }
   }
-
   return cache
 }
 
