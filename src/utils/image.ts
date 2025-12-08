@@ -29,3 +29,55 @@ export const getAreaData = (ctx: CanvasRenderingContext2D, selectionMask: Uint8A
 
   return result
 }
+export const getMouseCanvasCoordinates = (
+  canvas: HTMLCanvasElement,
+  clientX: number,
+  clientY: number
+) => {
+  const rect = canvas.getBoundingClientRect()
+  const scaleX = canvas.width / rect.width
+  const scaleY = canvas.height / rect.height
+  return {
+    x: Math.round((clientX - rect.left) * scaleX),
+    y: Math.round((clientY - rect.top) * scaleY)
+  }
+}
+
+export const getPointsBoundingBox = (points: Point[]) => {
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+
+  for (const { x, y } of points) {
+    if (x < minX) minX = x
+    if (y < minY) minY = y
+    if (x > maxX) maxX = x
+    if (y > maxY) maxY = y
+  }
+
+  const width = maxX - minX + 1
+  const height = maxY - minY + 1
+  return [width, height, minX, minY]
+}
+
+interface ICursorInBoundingBox {
+  drawing: {
+    minX: number
+    minY: number
+    width: number
+    height: number
+  }
+  mouse: {
+    x: number
+    y: number
+  }
+}
+
+export const cursorInBoundingBox = (opts: ICursorInBoundingBox) => {
+  const {
+    drawing: { width, height, minX, minY },
+    mouse
+  } = opts
+  return mouse.x >= minX && mouse.x <= minX + width && mouse.y >= minY && mouse.y <= minY + height
+}

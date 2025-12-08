@@ -20,7 +20,7 @@ export enum StoreActionType {
   MoveLayer,
   ResetImageCanvas,
   GenerateResult,
-  UpdateState,
+  UpdateState
 }
 
 interface CreateNewLayer {

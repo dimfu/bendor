@@ -3,7 +3,12 @@ import type { Layer, Point } from "~/types"
 import { useStore } from "~/hooks/useStore"
 import { StoreActionType } from "~/providers/store/reducer"
 import { useLoading } from "~/hooks/useLoading"
-import { getAreaData } from "~/utils/image"
+import {
+  cursorInBoundingBox,
+  getAreaData,
+  getMouseCanvasCoordinates,
+  getPointsBoundingBox
+} from "~/utils/image"
 import { flushSync } from "react-dom"
 
 function isPointInPolygon(point: Point, polygon: Point[]): boolean {
@@ -75,6 +80,9 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
   const areaRef = useRef<Uint8Array | null>(null)
 
   const [ongoingTouches, setOngoingTouches] = useState<Touch[]>([])
+
+  const [movable, setMovable] = useState<boolean>(false)
+  const mouseStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
   const getOngoingTouchById = useCallback(
     (id: number) => ongoingTouches.findIndex((t) => t.identifier === id),
@@ -156,16 +164,6 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       return
     }
 
-    const getCanvasCoordinates = (clientX: number, clientY: number) => {
-      const rect = activeCanvas.getBoundingClientRect()
-      const scaleX = activeCanvas.width / rect.width
-      const scaleY = activeCanvas.height / rect.height
-      return {
-        x: Math.round((clientX - rect.left) * scaleX),
-        y: Math.round((clientY - rect.top) * scaleY)
-      }
-    }
-
     const handleMouseDown = (e: MouseEvent) => {
       // dont do anything unless there is layer selected
       if (state.selectedLayerIdx < 0) {
@@ -173,7 +171,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       }
       isDrawingRef.current = true
       areaRef.current = new Uint8Array(activeCanvas.width * activeCanvas.height)
-      const point = getCanvasCoordinates(e.clientX, e.clientY)
+      const point = getMouseCanvasCoordinates(activeCanvas, e.clientX, e.clientY)
       startPointRef.current = point
       pointsRef.current = [point]
       renderSelection(
@@ -188,7 +186,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDrawingRef.current) return
 
-      const point = getCanvasCoordinates(e.clientX, e.clientY)
+      const point = getMouseCanvasCoordinates(activeCanvas, e.clientX, e.clientY)
       pointsRef.current.push(point)
       renderSelection(
         drawingCanvasCtx,
@@ -250,7 +248,11 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       if (touches.length > 0) {
         isDrawingRef.current = true
         areaRef.current = new Uint8Array(activeCanvas.width * activeCanvas.height)
-        const point = getCanvasCoordinates(touches[0].clientX, touches[0].clientY)
+        const point = getMouseCanvasCoordinates(
+          activeCanvas,
+          touches[0].clientX,
+          touches[0].clientY
+        )
         startPointRef.current = point
         pointsRef.current = [point]
         setOngoingTouches([touches[0]])
@@ -272,7 +274,11 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       for (let i = 0; i < touches.length; i++) {
         const idx = getOngoingTouchById(touches[i].identifier)
         if (idx >= 0) {
-          const point = getCanvasCoordinates(touches[i].clientX, touches[i].clientY)
+          const point = getMouseCanvasCoordinates(
+            activeCanvas,
+            touches[i].clientX,
+            touches[i].clientY
+          )
           pointsRef.current.push(point)
           setOngoingTouches((prev) => {
             const updated = [...prev]
@@ -338,7 +344,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
     const handleMouseMoveOutside = (e: MouseEvent) => {
       if (!isDrawingRef.current) return
       // get the rough coordinate first and clamp later
-      let point = getCanvasCoordinates(e.clientX, e.clientY)
+      let point = getMouseCanvasCoordinates(activeCanvas, e.clientX, e.clientY)
 
       // clamp point coordinate so that we only select points that are
       // within the canvas boundaries
@@ -417,14 +423,16 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
     }
 
     const ctrl = new AbortController()
-    activeCanvas.addEventListener("mousedown", handleMouseDown, ctrl)
-    activeCanvas.addEventListener("mousemove", handleMouseMove, ctrl)
-    activeCanvas.addEventListener("mouseup", handleMouseUp, ctrl)
-    activeCanvas.addEventListener("touchstart", handleTouchStart, ctrl)
-    activeCanvas.addEventListener("touchmove", handleTouchMove, ctrl)
-    activeCanvas.addEventListener("touchend", handleTouchEnd, ctrl)
-    activeCanvas.addEventListener("touchcancel", handleTouchCancel, ctrl)
-    activeCanvas.addEventListener("mouseout", handleMouseOut, ctrl)
+    if (state.mode === "edit") {
+      activeCanvas.addEventListener("mousedown", handleMouseDown, ctrl)
+      activeCanvas.addEventListener("mousemove", handleMouseMove, ctrl)
+      activeCanvas.addEventListener("mouseup", handleMouseUp, ctrl)
+      activeCanvas.addEventListener("touchstart", handleTouchStart, ctrl)
+      activeCanvas.addEventListener("touchmove", handleTouchMove, ctrl)
+      activeCanvas.addEventListener("touchend", handleTouchEnd, ctrl)
+      activeCanvas.addEventListener("touchcancel", handleTouchCancel, ctrl)
+      activeCanvas.addEventListener("mouseout", handleMouseOut, ctrl)
+    }
 
     return () => {
       ctrl.abort()
@@ -433,6 +441,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
     ongoingTouches,
     state.selectedLayerIdx,
     state.currentLayer,
+    state.mode,
     dispatch,
     getOngoingTouchById,
     selectArea,
@@ -561,6 +570,153 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       }
     })
   }, [state.selectedLayerIdx])
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const activeCanvas = container.querySelector<HTMLCanvasElement>(
+      `#drawing-canvas-${state.selectedLayerIdx}`
+    )
+    if (!activeCanvas) return
+    if (!state.currentLayer?.selection) return
+
+    const { points } = state.currentLayer.selection
+
+    if (state.mode === "move") {
+      const [width, height, minX, minY] = getPointsBoundingBox(points)
+
+      const drawingCanvasCtx = state.currentLayer?.ctx
+      if (!drawingCanvasCtx) {
+        return
+      }
+
+      const ctx = activeCanvas?.getContext("2d")
+      if (!ctx) {
+        return
+      }
+
+      ctx.fillStyle = state.currentLayer.color
+      ctx.fillRect(minX, minY, width, height)
+
+      // to determine if the cursor is inside the drawing bounding box or not
+      const onMouseDown = (e: MouseEvent) => {
+        e.preventDefault()
+        const { x: mouseX, y: mouseY } = getMouseCanvasCoordinates(
+          activeCanvas,
+          e.clientX,
+          e.clientY
+        )
+        const isInBound = cursorInBoundingBox({
+          drawing: {
+            width,
+            height,
+            minX,
+            minY
+          },
+          mouse: {
+            x: mouseX,
+            y: mouseY
+          }
+        })
+
+        if (!isInBound) {
+          console.log("is outside")
+          return
+        }
+        // if so we can start moving the drawing
+        setMovable(true)
+        mouseStartRef.current = { x: mouseX, y: mouseY }
+      }
+
+      const onMouseUp = (e: MouseEvent) => {
+        if (!movable) return
+        e.preventDefault()
+        setMovable(false)
+        flushSync(() => start())
+        requestIdleCallback(() => {
+          dispatch({ type: StoreActionType.ResetImageCanvas })
+          selectArea(pointsRef.current, activeCanvas)
+          dispatch({
+            type: StoreActionType.SetPointsToLayer,
+            payload: {
+              points: pointsRef.current,
+              start: startPointRef.current!
+            }
+          })
+          const imageCanvas = imageCanvasRef.current
+          const imageCtx = imageCanvas?.getContext("2d")
+          if (!imageCtx) return
+          const area = getAreaData(imageCtx, areaRef.current!)
+          dispatch({
+            type: StoreActionType.UpdateLayerSelection,
+            payload: {
+              layerIdx: state.selectedLayerIdx,
+              pselection: {
+                area
+              },
+              withUpdateInitialPresent: true
+            }
+          })
+          dispatch({ type: StoreActionType.GenerateResult })
+          stop()
+        })
+      }
+
+      const onMouseMove = (e: MouseEvent) => {
+        const { x: mouseX, y: mouseY } = getMouseCanvasCoordinates(
+          activeCanvas,
+          e.clientX,
+          e.clientY
+        )
+        const mousestart = mouseStartRef.current
+        if (!mousestart || !movable) {
+          return
+        }
+        const dx = mouseX - mousestart.x
+        const dy = mouseY - mousestart.y
+
+        const newPoints = pointsRef.current.map((point) => {
+          return {
+            x: point.x + dx,
+            y: point.y + dy,
+            data: point.data
+          }
+        })
+        pointsRef.current = newPoints
+        renderSelection(
+          drawingCanvasCtx,
+          activeCanvas,
+          pointsRef.current,
+          startPointRef.current,
+          state.currentLayer!.color
+        )
+        startPointRef.current = {
+          x: startPointRef.current!.x + dx,
+          y: startPointRef.current!.y + dy
+        }
+        mouseStartRef.current = { x: mouseX, y: mouseY }
+      }
+
+      const ctrl = new AbortController()
+      activeCanvas.addEventListener("mousedown", onMouseDown, ctrl)
+      activeCanvas.addEventListener("mouseup", onMouseUp, ctrl)
+      activeCanvas.addEventListener("mousemove", onMouseMove, ctrl)
+
+      return () => {
+        ctrl.abort()
+      }
+    }
+  }, [
+    state.mode,
+    state.currentLayer,
+    state.selectedLayerIdx,
+    movable,
+    dispatch,
+    selectArea,
+    start,
+    stop
+  ])
 
   return (
     <div

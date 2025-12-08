@@ -12,7 +12,14 @@ const Exports = () => {
   const [loadingFfmpeg, setLoadingFfmpeg] = useState(true)
 
   useEffect(() => {
-    ; (async () => {
+    // had to do this on my shit machine or the ram usage will shit itself
+    // upon many refreshes
+    if (import.meta.env.DEV) {
+      console.warn("in development mode, ffmpeg is turned off")
+      setLoadingFfmpeg(false)
+      return
+    }
+    ;(async () => {
       const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm"
       console.log("loading ffmpeg...")
       await ffmpegRef.current.load({
@@ -79,7 +86,8 @@ const Exports = () => {
       "10",
       "-i",
       "frame%03d.png",
-      '-vf', 'scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5',
+      "-vf",
+      "scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=128[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5",
       "output.gif"
     ])
 
@@ -93,7 +101,7 @@ const Exports = () => {
     a.click()
     URL.revokeObjectURL(url)
 
-    stop();
+    stop()
 
     // cleanups
     for (let i = 0; i < frames.length; i++) {
@@ -104,8 +112,12 @@ const Exports = () => {
 
   return (
     <div>
-      <button disabled={loadingFfmpeg || loading} onClick={onExportImage}>Export as image</button>
-      <button disabled={loadingFfmpeg || loading} onClick={onExportGIF}>Export as GIF</button>
+      <button disabled={loadingFfmpeg || loading} onClick={onExportImage}>
+        Export as image
+      </button>
+      <button disabled={loadingFfmpeg || loading} onClick={onExportGIF}>
+        Export as GIF
+      </button>
     </div>
   )
 }

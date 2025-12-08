@@ -6,5 +6,6 @@ export const initialStoreState: State = {
   originalAreaData: [],
   layers: [],
   currentLayer: undefined,
-  selectedLayerIdx: -1
+  selectedLayerIdx: -1,
+  mode: "edit"
 }

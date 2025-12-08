@@ -101,6 +101,7 @@ export interface State {
   layers: Layer[]
   currentLayer?: Layer
   selectedLayerIdx: number
+  mode: "edit" | "move"
 }
 
 export interface LoadingState {

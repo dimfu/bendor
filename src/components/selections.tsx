@@ -69,6 +69,16 @@ function Selections() {
     stop()
   }
 
+  const onModeButton = () => {
+    let mode: "edit" | "move" = "move"
+    if (state.mode === "edit") {
+      mode = "move"
+    } else {
+      mode = "edit"
+    }
+    dispatch({ type: StoreActionType.UpdateState, payload: { key: "mode", value: mode } })
+  }
+
   return (
     <div>
       <button onClick={onAddLayer}>Add new selection</button>
@@ -92,6 +102,7 @@ function Selections() {
             <button onClick={() => onDeleteLayer(idx)}>Delete</button>
             <button onClick={() => onMoveSelection("up", idx)}>Up</button>
             <button onClick={() => onMoveSelection("down", idx)}>Down</button>
+            <button onClick={onModeButton}>Mode : {state.mode}</button>
           </li>
         ))}
       </ul>
