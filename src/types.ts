@@ -1,3 +1,4 @@
+import type { FileTypeResult } from "file-type"
 import type { PIXEL_SORT_DIRECTIONS, RGB_SHIFT_OPTIONS } from "./constants"
 import type Commands from "./utils/commands"
 
@@ -95,6 +96,7 @@ export interface Layer {
 }
 
 export interface State {
+  ftype?: FileTypeResult
   imgBuf: ArrayBuffer
   imgCtx: CanvasRenderingContext2D | null
   originalAreaData: Point[]

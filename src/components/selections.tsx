@@ -10,7 +10,7 @@ function Selections() {
   const filterList = Object.keys(Filter)
 
   const onAddLayer = () => {
-    if (!loading) {
+    if (!loading && state.imgCtx) {
       dispatch({ type: StoreActionType.CreateNewLayer })
     }
   }

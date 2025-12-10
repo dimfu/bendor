@@ -17,6 +17,8 @@
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/types": "^0.12.4",
     "@ffmpeg/util": "^0.12.2",
+    "browser-image-compression": "^2.0.2",
+    "file-type": "^21.1.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },

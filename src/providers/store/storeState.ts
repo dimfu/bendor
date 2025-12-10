@@ -1,6 +1,7 @@
 import type { State } from "~/types"
 
 export const initialStoreState: State = {
+  ftype: undefined,
   imgBuf: new ArrayBuffer(),
   imgCtx: null,
   originalAreaData: [],

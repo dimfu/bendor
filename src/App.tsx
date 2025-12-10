@@ -7,18 +7,20 @@ import Canvas from "./components/canvas"
 import { LoadingProvider } from "./providers/loading/loadingProvider"
 import FilterConfigurations from "./components/filterConfigurations"
 import Exports from "./components/exports"
+import { fileTypeFromBuffer } from "file-type"
 
 function App() {
   const { dispatch } = useStore()
   const imageRef = useRef<HTMLInputElement>(null)
 
-  const onImageChange = () => {
+  const onImageChange = async () => {
     dispatch({ type: StoreActionType.ClearLayers })
     const files = imageRef.current?.files
     if (!files || files?.length == 0) {
       return
     }
     const file = files[0]
+    const blob = await file.slice(0).bytes()
     const reader = new FileReader()
     reader.onload = (event) => {
       if (event.target && event.target.result instanceof ArrayBuffer) {
@@ -28,6 +30,12 @@ function App() {
         })
       }
     }
+    const ftresult = await fileTypeFromBuffer(blob)
+    if (!ftresult) return
+    dispatch({
+      type: StoreActionType.UpdateState,
+      payload: { key: "ftype", value: ftresult }
+    })
     reader.readAsArrayBuffer(file)
   }
 

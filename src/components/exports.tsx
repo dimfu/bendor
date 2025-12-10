@@ -1,9 +1,12 @@
 import { FFmpeg } from "@ffmpeg/ffmpeg"
+import imageCompression, { type Options } from "browser-image-compression"
 import { toBlobURL } from "@ffmpeg/util"
 import { useEffect, useRef, useState } from "react"
 import { useLoading } from "~/hooks/useLoading"
 import { useStore } from "~/hooks/useStore"
 import { StoreActionType } from "~/providers/store/reducer"
+
+const EXPORT_TYPES = ["Image", "GIF"] as const
 
 // randomize filename by using the hash of the canvas blob
 const generateFilename = async (buf: ArrayBuffer) => {
@@ -17,48 +20,81 @@ const generateFilename = async (buf: ArrayBuffer) => {
 const Exports = () => {
   const ffmpegRef = useRef(new FFmpeg())
   const { loading, start, stop } = useLoading()
+
   const { state, dispatch } = useStore()
-  const [loadingFfmpeg, setLoadingFfmpeg] = useState(true)
+
+  const [exportType, setExportType] = useState<(typeof EXPORT_TYPES)[number]>("Image")
+  // TODO: use useState to make updated value visible to the user
+  // im kinda lazy to implement the ui side of this thing, not the most important thing yet
+  const imageQualitySliderRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     // had to do this on my shit machine or the ram usage will shit itself
     // upon many refreshes
     if (import.meta.env.DEV) {
       console.warn("in development mode, ffmpeg is turned off")
-      setLoadingFfmpeg(false)
       return
     }
-    ; (async () => {
-      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm"
-      console.log("loading ffmpeg...")
-      await ffmpegRef.current.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm")
-      })
-      setLoadingFfmpeg(false)
-      console.log("ffmpeg loaded")
-    })()
-  }, [])
+    start()
+      ; (async () => {
+        const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm"
+        await ffmpegRef.current.load({
+          coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
+          wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm")
+        })
+        stop()
+        console.info("ffmpeg loaded")
+      })()
+  }, [start, stop])
 
   if (!state.imgCtx) return <div></div>
 
-  const onExportImage = async () => {
+  const onExportImage = async (quality: number) => {
     if (!state.imgCtx) return
 
-    const blob = await new Promise<Blob>((resolve) => {
-      state.imgCtx!.canvas.toBlob((blob) => {
-        resolve(blob!)
-      }, "image/png")
+    if (!state.ftype) {
+      console.error("uploaded image don't have a FileType")
+      return
+    }
+    const ftype = state.ftype
+
+    start()
+    const file = await new Promise<File>((resolve) => {
+      state.imgCtx!.canvas.toBlob(
+        (blob) => {
+          const file = new File([blob!], `out.${ftype.ext}`, { type: ftype.mime })
+          resolve(file)
+        },
+        ftype.mime,
+        quality
+      )
     })
 
-    const filename = await generateFilename(await blob.arrayBuffer())
-    const url = URL.createObjectURL(blob)
+    // weird hack, but this speeds up the image compression if the user leave the quality to 100%
+    if (quality === 100) {
+      quality = 0
+    }
+
+    const originalSizeMB = file.size / (1024 * 1024)
+    const targetSizeMB = (originalSizeMB * quality) / 100
+
+    const opts: Options = {
+      maxSizeMB: targetSizeMB / 1024,
+      maxWidthOrHeight: undefined,
+      useWebWorker: true,
+      alwaysKeepResolution: true,
+      initialQuality: quality / 100
+    }
+
+    const compressedFile = await imageCompression(file, opts)
+    const filename = await generateFilename(await compressedFile.arrayBuffer())
+    const url = URL.createObjectURL(compressedFile)
     const a = document.createElement("a")
     a.href = url
-    a.download = `${filename}.png`
+    a.download = `${filename}.gif`
     a.click()
-
     URL.revokeObjectURL(url)
+    stop()
   }
 
   const onExportGIF = async () => {
@@ -85,9 +121,9 @@ const Exports = () => {
     dispatch({ type: StoreActionType.ResetImageCanvas })
     // and iterate from there
     for (let i = 0; i < 11; i++) {
+      dispatch({ type: StoreActionType.ResetImageCanvas })
       dispatch({ type: StoreActionType.GenerateResult, payload: { refresh: true } })
       frames.push(await captureFrame())
-      dispatch({ type: StoreActionType.ResetImageCanvas })
     }
 
     for (let i = 0; i < frames.length; i++) {
@@ -127,14 +163,46 @@ const Exports = () => {
     await ffmpeg.deleteFile("output.gif")
   }
 
+  const onExport = () => {
+    if (exportType === "Image") {
+      const ref = imageQualitySliderRef.current
+      onExportImage(Number(ref?.value ?? 1.0))
+    } else {
+      onExportGIF()
+    }
+  }
+
   return (
     <div>
-      <button disabled={loadingFfmpeg || loading} onClick={onExportImage}>
-        Export as image
-      </button>
-      <button disabled={loadingFfmpeg || loading} onClick={onExportGIF}>
-        Export as GIF
-      </button>
+      <p>Export options</p>
+      <select
+        onChange={(e) => setExportType(e.currentTarget.value as typeof exportType)}
+        value={exportType}
+        disabled={loading}
+      >
+        {EXPORT_TYPES.map((t, idx) => (
+          <option key={idx} value={t}>
+            {t}
+          </option>
+        ))}
+      </select>
+      {exportType === "Image" ? (
+        <div>
+          <label>Image Quality</label>
+          <input
+            ref={imageQualitySliderRef}
+            type="range"
+            step={1}
+            min={10}
+            max={100}
+            defaultValue={100}
+          />
+        </div>
+      ) : (
+        <div></div>
+      )}
+      <br />
+      <button onClick={onExport}>Export</button>
     </div>
   )
 }
