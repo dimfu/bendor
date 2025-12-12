@@ -19,6 +19,7 @@
     "@ffmpeg/util": "^0.12.2",
     "browser-image-compression": "^2.0.2",
     "file-type": "^21.1.1",
+    "gifsicle-wasm-browser": "^1.5.16",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },

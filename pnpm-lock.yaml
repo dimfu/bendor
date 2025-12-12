@@ -23,6 +23,9 @@ importers:
       file-type:
         specifier: ^21.1.1
         version: 21.1.1
+      gifsicle-wasm-browser:
+        specifier: ^1.5.16
+        version: 1.5.16
       react:
         specifier: ^19.1.1
         version: 19.2.0
@@ -898,6 +901,9 @@ packages:
   gensync@1.0.0-beta.2:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
     engines: {node: '>=6.9.0'}
+
+  gifsicle-wasm-browser@1.5.16:
+    resolution: {integrity: sha512-Ewcx93IlZwVZjqvFxFdE4uIc/q01y598BXpjzt5vAOvNFKcl/nVp4WZwmtINAtkXKr5RP1HJ5QRdnTqET3fLkQ==}
 
   glob-parent@5.1.2:
     resolution: {integrity: sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow==}
@@ -2066,6 +2072,8 @@ snapshots:
     optional: true
 
   gensync@1.0.0-beta.2: {}
+
+  gifsicle-wasm-browser@1.5.16: {}
 
   glob-parent@5.1.2:
     dependencies:
