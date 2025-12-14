@@ -357,21 +357,11 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
         }
       })
 
-      drawManagerRef.current.selectAllArea()
-      drawManagerRef.current.getSelectArea()
-      const { points, startPoint, selectionArea } = drawManagerRef.current
-      dispatch({
-        type: StoreActionType.SetPointsToLayer,
-        payload: {
-          points: points,
-          start: startPoint!
-        }
-      })
-
       const imageCanvas = imageCanvasRef.current
       const imageCtx = imageCanvas?.getContext("2d", { willReadFrequently: true })
       if (!imageCtx) return
-      const area = getAreaData(imageCtx, selectionArea!)
+      const emptySelection = new Uint8Array()
+      const area = getAreaData(imageCtx, emptySelection)
 
       dispatch({
         type: StoreActionType.UpdateLayerSelection,
