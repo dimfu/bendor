@@ -21,7 +21,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
   useEffect(() => {
     if (state.imgBuf.byteLength === 0 || !imageCanvasRef.current) return
     const imageCanvas = imageCanvasRef.current
-    const imageCtx = imageCanvas.getContext("2d")
+    const imageCtx = imageCanvas?.getContext("2d", { willReadFrequently: true })
     if (!imageCtx) return
 
     const container = containerRef.current
@@ -369,7 +369,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       })
 
       const imageCanvas = imageCanvasRef.current
-      const imageCtx = imageCanvas?.getContext("2d")
+      const imageCtx = imageCanvas?.getContext("2d", { willReadFrequently: true })
       if (!imageCtx) return
       const area = getAreaData(imageCtx, selectionArea!)
 
@@ -453,7 +453,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
             }
           })
           const imageCanvas = imageCanvasRef.current
-          const imageCtx = imageCanvas?.getContext("2d")
+          const imageCtx = imageCanvas?.getContext("2d", { willReadFrequently: true })
           if (!imageCtx) return
           const area = getAreaData(imageCtx, selectionArea!)
           dispatch({

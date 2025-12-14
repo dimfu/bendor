@@ -20,7 +20,8 @@ function App() {
       return
     }
     const file = files[0]
-    const blob = await file.slice(0).bytes()
+    const arrayBuf = await file.arrayBuffer()
+    const blob = new Uint8Array(arrayBuf)
     const reader = new FileReader()
     reader.onload = (event) => {
       if (event.target && event.target.result instanceof ArrayBuffer) {
