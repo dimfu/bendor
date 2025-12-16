@@ -35,8 +35,6 @@ function Selections() {
         withUpdateInitialPresent: false
       }
     })
-    dispatch({ type: StoreActionType.ResetImageCanvas })
-    dispatch({ type: StoreActionType.GenerateResult })
     stop()
   }
 

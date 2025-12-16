@@ -3,7 +3,6 @@ import { useStore } from "~/hooks/useStore"
 import { StoreActionType } from "~/providers/store/reducer"
 import { useLoading } from "~/hooks/useLoading"
 import { cursorInBoundingBox, getAreaData, getMouseCanvasCoordinates } from "~/utils/image"
-import { flushSync } from "react-dom"
 import DrawManager from "~/utils/drawManager"
 
 function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
@@ -99,7 +98,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       drawManagerRef.current.finish()
       drawingCanvasCtx.clearRect(0, 0, activeCanvas.width, activeCanvas.height)
       drawManagerRef.current.renderSelection(drawingCanvasCtx, activeCanvas, state.currentLayer!.color)
-      flushSync(() => start())
+      start()
       requestIdleCallback(() => {
         dispatch({ type: StoreActionType.ResetImageCanvas })
         drawManagerRef.current.getSelectArea()
@@ -114,17 +113,30 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
         const imageCanvas = imageCanvasRef.current
         const imageCtx = imageCanvas?.getContext("2d")
         if (!imageCtx) return
-        const area = getAreaData(imageCtx, selectionArea!)
-        dispatch({
-          type: StoreActionType.UpdateLayerSelection,
-          payload: {
-            layerIdx: state.selectedLayerIdx,
-            pselection: {
-              area
-            },
-            withUpdateInitialPresent: true
-          }
-        })
+        if (drawManagerRef.current.points.length > 1) {
+          const area = getAreaData(imageCtx, selectionArea!)
+          dispatch({
+            type: StoreActionType.UpdateLayerSelection,
+            payload: {
+              layerIdx: state.selectedLayerIdx,
+              pselection: {
+                area
+              },
+              withUpdateInitialPresent: true
+            }
+          })
+        } else {
+          dispatch({
+            type: StoreActionType.UpdateLayerSelection,
+            payload: {
+              layerIdx: state.selectedLayerIdx,
+              pselection: {
+                area: state.originalAreaData
+              },
+              withUpdateInitialPresent: true
+            }
+          })
+        }
         const [, , minX, minY] = drawManagerRef.current.getPointsBoundingBox()
         drawManagerRef.current.mouseStartPos = { x: minX, y: minY }
         dispatch({ type: StoreActionType.GenerateResult })
@@ -137,6 +149,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       const touches = e.changedTouches
       if (touches.length > 0) {
         const point = getMouseCanvasCoordinates(activeCanvas, touches[0].clientX, touches[0].clientY)
+        drawManagerRef.current.reset()
         drawManagerRef.current.begin(point)
         setOngoingTouches([touches[0]])
         drawManagerRef.current.renderSelection(drawingCanvasCtx, activeCanvas, state.currentLayer!.color)
@@ -171,7 +184,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
         }
       }
       drawManagerRef.current.renderSelection(drawingCanvasCtx, activeCanvas, state.currentLayer!.color)
-      flushSync(() => start())
+      start()
       requestIdleCallback(() => {
         dispatch({ type: StoreActionType.ResetImageCanvas })
         drawManagerRef.current.getSelectArea()
@@ -251,7 +264,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       drawingCanvasCtx.clearRect(0, 0, activeCanvas.width, activeCanvas.height)
       drawManagerRef.current.renderSelection(drawingCanvasCtx, activeCanvas, state.currentLayer!.color)
 
-      flushSync(() => start())
+      start()
       requestIdleCallback(() => {
         dispatch({ type: StoreActionType.ResetImageCanvas })
         drawManagerRef.current.getSelectArea()
@@ -297,7 +310,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
     return () => {
       ctrl.abort()
     }
-  }, [ongoingTouches, state.selectedLayerIdx, state.currentLayer, state.mode, dispatch, getOngoingTouchById, start, stop])
+  }, [ongoingTouches, state.selectedLayerIdx, state.currentLayer, state.mode, dispatch, getOngoingTouchById, start, stop, state.originalAreaData])
 
   // Handle selection render on layer index change
   useEffect(() => {
@@ -430,7 +443,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
         if (!selectionMovable) return
         e.preventDefault()
         setSelectionMovable(false)
-        flushSync(() => start())
+        start()
         requestIdleCallback(() => {
           dispatch({ type: StoreActionType.ResetImageCanvas })
           drawManagerRef.current.getSelectArea()
@@ -520,7 +533,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
         if (!selectionMovable) return
         e.preventDefault()
         setSelectionMovable(false)
-        flushSync(() => start())
+        start()
         requestIdleCallback(() => {
           dispatch({ type: StoreActionType.ResetImageCanvas })
           drawManagerRef.current.getSelectArea()

@@ -155,25 +155,31 @@ const storeReducer = (state: State, action: Action): State => {
     }
 
     case StoreActionType.SetPointsToLayer: {
-      if (!isInBounds(state.layers.length, state.selectedLayerIdx)) return state
+      const idx = state.selectedLayerIdx
+      if (!isInBounds(state.layers.length, idx)) return state
 
-      const updated = state.layers.map((layer) => ({ ...layer }))
-      updated[state.selectedLayerIdx] = {
-        ...updated[state.selectedLayerIdx],
-        selection: {
-          ...updated[state.selectedLayerIdx].selection,
-          start: action.payload.start,
-          points: action.payload.points,
-          filter: updated[state.selectedLayerIdx].selection.filter
-        }
+      const layers = state.layers.slice()
+
+      const prevLayer = layers[idx]
+      const prevSelection = prevLayer.selection
+
+      const nextSelection = {
+        ...prevSelection,
+        start: action.payload.start,
+        points: action.payload.points
       }
 
-      const curr = updated[state.selectedLayerIdx]
-      curr.commands = curr.commands.set(curr.selection)
+      const nextLayer = {
+        ...prevLayer,
+        selection: nextSelection,
+        commands: prevLayer.commands.set(nextSelection)
+      }
+
+      layers[idx] = nextLayer
 
       return {
         ...state,
-        layers: updated
+        layers
       }
     }
 
@@ -222,44 +228,52 @@ const storeReducer = (state: State, action: Action): State => {
     }
 
     case StoreActionType.UpdateLayerSelection: {
+      const { layerIdx, pselection, withUpdateInitialPresent } = action.payload
       if (!isInBounds(state.layers.length, state.selectedLayerIdx)) return state
-      const updated = state.layers.map((layer) => ({ ...layer }))
+      const layers = state.layers.slice()
 
-      const selection = {
-        ...updated[action.payload.layerIdx].selection,
-        ...action.payload.pselection,
-        config: {
-          ...updated[action.payload.layerIdx].selection.config,
-          ...(action.payload.pselection.config || {})
-        }
-      } satisfies LSelection
+      const prevLayer = layers[layerIdx]
+      const prevSelection = prevLayer.selection
 
-      // update filter config to it's default value whenever we change filter
-      if (action.payload.pselection.filter && action.payload.pselection.filter != updated[action.payload.layerIdx].selection.filter) {
-        selection.config = defaultConfig(selection.filter)
+      const nextFilter =
+        pselection.filter ?? prevSelection.filter
+
+      const nextConfig =
+        pselection.filter && pselection.filter !== prevSelection.filter
+          ? defaultConfig(nextFilter)
+          : {
+            ...prevSelection.config,
+            ...(pselection.config || {})
+          }
+
+      const nextSelection: LSelection = {
+        ...prevSelection,
+        ...pselection,
+        filter: nextFilter,
+        config: nextConfig
       }
 
-      updated[action.payload.layerIdx] = {
-        ...updated[action.payload.layerIdx],
-        selection
+      const nextLayer = {
+        ...prevLayer,
+        selection: nextSelection
       }
 
-      const isCurrent = action.payload.layerIdx === state.selectedLayerIdx
-      const curr = updated[state.selectedLayerIdx]
-      // update the area array on initial `present` value of layer's commands
-      // since the initial value was an empty array
-      if (action.payload.withUpdateInitialPresent) {
-        curr.commands.present = {
-          ...updated[action.payload.layerIdx].selection
+      if (withUpdateInitialPresent) {
+        nextLayer.commands.present = {
+          ...prevLayer.selection
         }
       } else {
-        curr.commands = curr.commands.set(curr.selection)
+        nextLayer.commands = prevLayer.commands.set(nextSelection)
       }
+
+      layers[layerIdx] = nextLayer
+
+      const isCurrent = layerIdx === state.selectedLayerIdx
 
       return {
         ...state,
-        layers: updated,
-        currentLayer: isCurrent ? updated[action.payload.layerIdx] : state.currentLayer
+        layers,
+        currentLayer: isCurrent ? nextLayer : state.currentLayer
       }
     }
 
@@ -357,29 +371,46 @@ const storeReducer = (state: State, action: Action): State => {
 
     case StoreActionType.GenerateResult: {
       const imageCanvas = state.imgCtx
-      if (!imageCanvas) {
-        return state
-      }
+      if (!imageCanvas) return state
 
-      const updatedLayers = state.layers.map((layer) => {
+      let layers = state.layers
+      let didChange = false
+
+      for (let i = 0; i < state.layers.length; i++) {
+        const layer = state.layers[i]
         const { area, filter } = layer.selection
         const filterFn = filterFnRegistry[filter]
-        if (!filterFn) return layer
+        if (!filterFn) continue
 
         const { updatedSelection } = filterFn({
           imageCanvas,
-          layer: { ...layer, selection: { ...layer.selection } },
+          layer: {
+            ...layer,
+            selection: { ...layer.selection }
+          },
           area,
           refresh: action.payload?.refresh
         })
 
-        return {
-          ...layer,
-          selection: updatedSelection,
-        }
-      })
+        if (updatedSelection !== layer.selection) {
+          if (!didChange) {
+            layers = state.layers.slice()
+            didChange = true
+          }
 
-      return { ...state, layers: updatedLayers }
+          layers[i] = {
+            ...layer,
+            selection: updatedSelection
+          }
+        }
+      }
+
+      if (!didChange) return state
+
+      return {
+        ...state,
+        layers
+      }
     }
 
     // revert back to the original image canvas
