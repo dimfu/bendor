@@ -1,7 +1,7 @@
-import type { Filter, FilterFunction, LSelection, Point } from "~/types"
+import type { Filter, FilterFunction, LSelection } from "~/types"
 import { Color } from "../color"
 
-export const fractalPixelSortFilter: FilterFunction = ({ imageCanvas, layer, area, refresh }) => {
+export const fractalPixelSortFilter: FilterFunction = ({ imageCanvas, layer, selectionArea, refresh }) => {
   const selection = layer.selection as LSelection<Filter.FractalPixelSort>
   let cache: Uint8ClampedArray
 
@@ -11,7 +11,7 @@ export const fractalPixelSortFilter: FilterFunction = ({ imageCanvas, layer, are
     cache = selection.config.cache
   }
 
-  applyFilter(imageCanvas, cache, area)
+  applyFilter(imageCanvas, cache, selectionArea)
 
   return {
     updatedSelection: {
@@ -94,13 +94,12 @@ const applyColorShift = (
   }
 }
 
-const applyFilter = (imageCanvas: CanvasRenderingContext2D, cache: Uint8ClampedArray, area: Point[]) => {
+const applyFilter = (imageCanvas: CanvasRenderingContext2D, cache: Uint8ClampedArray, selectionArea: Uint32Array) => {
   const wholeImage = imageCanvas.getImageData(0, 0, imageCanvas.canvas.width, imageCanvas.canvas.height)
   const data = wholeImage.data
-  const fullWidth = imageCanvas.canvas.width
 
-  for (const { x, y } of area) {
-    const index = (y * fullWidth + x) * 4
+  for (let i = 0; i < selectionArea.length; i++) {
+    const index = selectionArea[i] * 4
     const { red, blue, green } = new Color(cache.slice(index, index + 4))
     data[index] = red
     data[index + 1] = blue

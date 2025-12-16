@@ -4,7 +4,7 @@ export const initialStoreState: State = {
   ftype: undefined,
   imgBuf: new ArrayBuffer(),
   imgCtx: null,
-  originalAreaData: [],
+  originalImageData: null,
   layers: [],
   currentLayer: undefined,
   selectedLayerIdx: -1,

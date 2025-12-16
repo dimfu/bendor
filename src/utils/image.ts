@@ -1,25 +1,3 @@
-import type { Point } from "../types"
-
-// retrieve pixel data from area inside the selection points
-export const getAreaData = (ctx: CanvasRenderingContext2D, selectionMask: Uint8Array): Point[] => {
-  const { width } = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height)
-
-  const result: Point[] = []
-
-  for (let index = 0; index < selectionMask.length; index++) {
-    if (selectionMask[index] === 0) continue
-
-    const x = index % width
-    const y = Math.floor(index / width)
-
-    result.push({
-      x,
-      y,
-    })
-  }
-
-  return result
-}
 export const getMouseCanvasCoordinates = (canvas: HTMLCanvasElement, clientX: number, clientY: number) => {
   const rect = canvas.getBoundingClientRect()
   const scaleX = canvas.width / rect.width

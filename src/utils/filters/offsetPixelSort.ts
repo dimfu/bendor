@@ -1,7 +1,7 @@
 import type { Filter, FilterFunction, LSelection } from "~/types"
 import { Color } from "../color"
 
-export const offsetPixelSort: FilterFunction = ({ layer, imageCanvas, area, refresh }) => {
+export const offsetPixelSort: FilterFunction = ({ layer, imageCanvas, selectionArea, refresh }) => {
   const selection = layer.selection as LSelection<Filter.OffsetPixelSort>
   const width = imageCanvas.canvas.width
   const height = imageCanvas.canvas.height
@@ -154,8 +154,8 @@ export const offsetPixelSort: FilterFunction = ({ layer, imageCanvas, area, refr
   const finalData = finalImg.data
 
   //apply the processed effect to the original imageCanvas only in the area
-  for (const { x, y } of area) {
-    const index = (y * width + x) * 4
+  for (let i = 0; i < selectionArea.length; i++) {
+    const index = selectionArea[i] * 4
     const { red, green, blue, alpha } = new Color(sortedData.slice(index, index + 4))
     finalData[index] = red
     finalData[index + 1] = green

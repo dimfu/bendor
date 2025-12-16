@@ -133,10 +133,10 @@ const storeReducer = (state: State, action: Action): State => {
     case StoreActionType.CreateNewLayer: {
       const selection: LSelection<Filter.None> = {
         points: [],
-        area: [],
         start: { x: 0, y: 0 },
         filter: Filter.None,
-        config: defaultConfig(Filter.None)
+        config: defaultConfig(Filter.None),
+        selectionArea: new Uint32Array()
       }
       const newLayer: Layer = {
         selection,
@@ -281,7 +281,7 @@ const storeReducer = (state: State, action: Action): State => {
       return {
         ...initialStoreState,
         imgCtx: null,
-        originalAreaData: []
+        originalImageData: null
       }
 
     case StoreActionType.DoLayerAction: {
@@ -378,7 +378,10 @@ const storeReducer = (state: State, action: Action): State => {
 
       for (let i = 0; i < state.layers.length; i++) {
         const layer = state.layers[i]
-        const { area, filter } = layer.selection
+        const { filter, selectionArea } = layer.selection
+        if (!selectionArea) {
+          continue
+        }
         const filterFn = filterFnRegistry[filter]
         if (!filterFn) continue
 
@@ -388,7 +391,7 @@ const storeReducer = (state: State, action: Action): State => {
             ...layer,
             selection: { ...layer.selection }
           },
-          area,
+          selectionArea,
           refresh: action.payload?.refresh
         })
 
@@ -417,19 +420,10 @@ const storeReducer = (state: State, action: Action): State => {
     case StoreActionType.ResetImageCanvas: {
       const imageCanvas = state.imgCtx
       if (!imageCanvas) return state
-
-      const original = imageCanvas.getImageData(0, 0, imageCanvas.canvas.width, imageCanvas.canvas.height)
-      const data = original.data
-
-      for (const { x, y, data: src } of state.originalAreaData) {
-        if (!src) continue
-        const index = (y * imageCanvas.canvas.width + x) * 4
-        data[index + 0] = src[0]
-        data[index + 1] = src[1]
-        data[index + 2] = src[2]
-        data[index + 3] = src[3]
+      if (!state.originalImageData) {
+        throw new Error("Original image data is not defined")
       }
-      imageCanvas.putImageData(original, 0, 0)
+      imageCanvas.putImageData(state.originalImageData, 0, 0)
       return state
     }
 

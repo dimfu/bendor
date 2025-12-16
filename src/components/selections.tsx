@@ -60,7 +60,7 @@ function Selections() {
       type: StoreActionType.UpdateLayerSelection,
       payload: {
         layerIdx: state.selectedLayerIdx,
-        pselection: { area: state.originalAreaData, config: {} },
+        pselection: { points: [], selectionArea: new Uint32Array, config: {} },
         withUpdateInitialPresent: false
       }
     })

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { useStore } from "~/hooks/useStore"
 import { StoreActionType } from "~/providers/store/reducer"
 import { useLoading } from "~/hooks/useLoading"
-import { cursorInBoundingBox, getAreaData, getMouseCanvasCoordinates } from "~/utils/image"
+import { cursorInBoundingBox, getMouseCanvasCoordinates } from "~/utils/image"
 import DrawManager from "~/utils/drawManager"
 
 function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
@@ -52,11 +52,9 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       // set the canvas dimension the same as the image canvas
       drawManagerRef.current.cwidth = img.naturalWidth
       drawManagerRef.current.cheight = img.naturalHeight
-
-      const area = getAreaData(imageCtx, wholeImageArea)
       dispatch({
         type: StoreActionType.UpdateState,
-        payload: { key: "originalAreaData", value: area }
+        payload: { key: "originalImageData", value: imageCtx.getImageData(0, 0, imageCtx.canvas.width, imageCtx.canvas.height) }
       })
       stop()
     }
@@ -102,7 +100,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       requestIdleCallback(() => {
         dispatch({ type: StoreActionType.ResetImageCanvas })
         drawManagerRef.current.getSelectArea()
-        const { points, startPoint, selectionArea } = drawManagerRef.current
+        const { points, startPoint } = drawManagerRef.current
         dispatch({
           type: StoreActionType.SetPointsToLayer,
           payload: {
@@ -113,30 +111,17 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
         const imageCanvas = imageCanvasRef.current
         const imageCtx = imageCanvas?.getContext("2d")
         if (!imageCtx) return
-        if (drawManagerRef.current.points.length > 1) {
-          const area = getAreaData(imageCtx, selectionArea!)
-          dispatch({
-            type: StoreActionType.UpdateLayerSelection,
-            payload: {
-              layerIdx: state.selectedLayerIdx,
-              pselection: {
-                area
-              },
-              withUpdateInitialPresent: true
-            }
-          })
-        } else {
-          dispatch({
-            type: StoreActionType.UpdateLayerSelection,
-            payload: {
-              layerIdx: state.selectedLayerIdx,
-              pselection: {
-                area: state.originalAreaData
-              },
-              withUpdateInitialPresent: true
-            }
-          })
-        }
+        const selectionArea = drawManagerRef.current.getSelectedAreaCoords()
+        dispatch({
+          type: StoreActionType.UpdateLayerSelection,
+          payload: {
+            layerIdx: state.selectedLayerIdx,
+            pselection: {
+              selectionArea
+            },
+            withUpdateInitialPresent: true
+          }
+        })
         const [, , minX, minY] = drawManagerRef.current.getPointsBoundingBox()
         drawManagerRef.current.mouseStartPos = { x: minX, y: minY }
         dispatch({ type: StoreActionType.GenerateResult })
@@ -188,7 +173,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       requestIdleCallback(() => {
         dispatch({ type: StoreActionType.ResetImageCanvas })
         drawManagerRef.current.getSelectArea()
-        const { points, startPoint, selectionArea } = drawManagerRef.current
+        const { points, startPoint } = drawManagerRef.current
         dispatch({
           type: StoreActionType.SetPointsToLayer,
           payload: {
@@ -199,13 +184,13 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
         const imageCanvas = imageCanvasRef.current
         const imageCtx = imageCanvas?.getContext("2d")
         if (!imageCtx) return
-        const area = getAreaData(imageCtx, selectionArea!)
+        const selectionArea = drawManagerRef.current.getSelectedAreaCoords()
         dispatch({
           type: StoreActionType.UpdateLayerSelection,
           payload: {
             layerIdx: state.selectedLayerIdx,
             pselection: {
-              area
+              selectionArea
             },
             withUpdateInitialPresent: true
           }
@@ -268,7 +253,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       requestIdleCallback(() => {
         dispatch({ type: StoreActionType.ResetImageCanvas })
         drawManagerRef.current.getSelectArea()
-        const { points, startPoint, selectionArea } = drawManagerRef.current
+        const { points, startPoint } = drawManagerRef.current
         dispatch({
           type: StoreActionType.SetPointsToLayer,
           payload: {
@@ -279,17 +264,6 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
         const imageCanvas = imageCanvasRef.current
         const imageCtx = imageCanvas?.getContext("2d")
         if (!imageCtx) return
-        const area = getAreaData(imageCtx, selectionArea!)
-        dispatch({
-          type: StoreActionType.UpdateLayerSelection,
-          payload: {
-            layerIdx: state.selectedLayerIdx,
-            pselection: {
-              area
-            },
-            withUpdateInitialPresent: true
-          }
-        })
         dispatch({ type: StoreActionType.GenerateResult })
         stop()
       })
@@ -310,7 +284,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
     return () => {
       ctrl.abort()
     }
-  }, [ongoingTouches, state.selectedLayerIdx, state.currentLayer, state.mode, dispatch, getOngoingTouchById, start, stop, state.originalAreaData])
+  }, [ongoingTouches, state.selectedLayerIdx, state.currentLayer, state.mode, dispatch, getOngoingTouchById, start, stop])
 
   // Handle selection render on layer index change
   useEffect(() => {
@@ -320,7 +294,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
     const activeCanvas = container.querySelector<HTMLCanvasElement>(`#drawing-canvas-${state.selectedLayerIdx}`)
 
     if (!state.currentLayer?.selection) return
-    const { points, start, area } = state.currentLayer.selection
+    const { points, start } = state.currentLayer.selection
 
     // when user selects a layer, sync its points into refs
     drawManagerRef.current.reset()
@@ -332,7 +306,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
         state.currentLayer.ctx?.clearRect(0, 0, activeCanvas?.width, activeCanvas?.height)
       }
       // mark existing layer area coordinate in areaRef
-      drawManagerRef.current.fillSelectionArea(area)
+      // drawManagerRef.current.fillSelectionArea(area)
       drawManagerRef.current.renderSelection(state.currentLayer.ctx, activeCanvas, state.currentLayer!.color)
     }
 
@@ -373,19 +347,8 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
       const imageCanvas = imageCanvasRef.current
       const imageCtx = imageCanvas?.getContext("2d", { willReadFrequently: true })
       if (!imageCtx) return
-      const emptySelection = new Uint8Array()
-      const area = getAreaData(imageCtx, emptySelection)
-
-      dispatch({
-        type: StoreActionType.UpdateLayerSelection,
-        payload: {
-          layerIdx: state.selectedLayerIdx,
-          pselection: { area },
-          withUpdateInitialPresent: false
-        }
-      })
     }
-  }, [state.selectedLayerIdx, state.currentLayer, state.originalAreaData, state.currentLayer?.commands.present, dispatch])
+  }, [state.selectedLayerIdx, state.currentLayer, state.currentLayer?.commands.present, dispatch])
 
   // to handle drawing movement
   useEffect(() => {
@@ -447,7 +410,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
         requestIdleCallback(() => {
           dispatch({ type: StoreActionType.ResetImageCanvas })
           drawManagerRef.current.getSelectArea()
-          const { points, startPoint, selectionArea } = drawManagerRef.current
+          const { points, startPoint } = drawManagerRef.current
           dispatch({
             type: StoreActionType.SetPointsToLayer,
             payload: {
@@ -458,13 +421,13 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
           const imageCanvas = imageCanvasRef.current
           const imageCtx = imageCanvas?.getContext("2d", { willReadFrequently: true })
           if (!imageCtx) return
-          const area = getAreaData(imageCtx, selectionArea!)
+          const selectionArea = drawManagerRef.current.getSelectedAreaCoords()
           dispatch({
             type: StoreActionType.UpdateLayerSelection,
             payload: {
               layerIdx: state.selectedLayerIdx,
               pselection: {
-                area
+                selectionArea
               },
               withUpdateInitialPresent: true
             }
@@ -537,7 +500,7 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
         requestIdleCallback(() => {
           dispatch({ type: StoreActionType.ResetImageCanvas })
           drawManagerRef.current.getSelectArea()
-          const { points, startPoint, selectionArea } = drawManagerRef.current
+          const { points, startPoint } = drawManagerRef.current
           dispatch({
             type: StoreActionType.SetPointsToLayer,
             payload: {
@@ -548,13 +511,13 @@ function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
           const imageCanvas = imageCanvasRef.current
           const imageCtx = imageCanvas?.getContext("2d", { willReadFrequently: true })
           if (!imageCtx) return
-          const area = getAreaData(imageCtx, selectionArea!)
+          const selectionArea = drawManagerRef.current.getSelectedAreaCoords()
           dispatch({
             type: StoreActionType.UpdateLayerSelection,
             payload: {
               layerIdx: state.selectedLayerIdx,
               pselection: {
-                area
+                selectionArea
               },
               withUpdateInitialPresent: true
             }

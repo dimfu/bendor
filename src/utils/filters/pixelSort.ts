@@ -1,7 +1,7 @@
 import type { Filter, FilterFunction, LSelection } from "~/types"
 import { Color } from "../color"
 
-export const pixelSort: FilterFunction = ({ imageCanvas, layer, area, refresh }) => {
+export const pixelSort: FilterFunction = ({ imageCanvas, layer, selectionArea, refresh }) => {
   const img = imageCanvas.getImageData(0, 0, imageCanvas.canvas.width, imageCanvas.canvas.height)
   const data = img.data
   const width = imageCanvas.canvas.width
@@ -25,8 +25,8 @@ export const pixelSort: FilterFunction = ({ imageCanvas, layer, area, refresh })
     sortedData = selection.config.cache
   }
 
-  for (const { x, y } of area) {
-    const index = (y * width + x) * 4
+  for (let i = 0; i < selectionArea.length; i++) {
+    const index = selectionArea[i] * 4
     const { red, green, blue } = new Color(sortedData.slice(index, index + 4))
     data[index] = red
     data[index + 1] = green

@@ -78,7 +78,7 @@ export interface LSelection<F extends Filter = Filter> {
   // The collections of points that define the selected area on the layer
   points: Point[]
   // The area inside the selection point
-  area: Point[]
+  selectionArea: Uint32Array | null
   // The starting point/position of the selection
   start: Point
   // The visual filter that applied to this layer
@@ -99,7 +99,7 @@ export interface State {
   ftype?: FileTypeResult
   imgBuf: ArrayBuffer
   imgCtx: CanvasRenderingContext2D | null
-  originalAreaData: Point[]
+  originalImageData: ImageData | null
   layers: Layer[]
   currentLayer?: Layer
   selectedLayerIdx: number
@@ -114,7 +114,7 @@ export interface LoadingState {
 export interface FilterContext {
   imageCanvas: CanvasRenderingContext2D
   layer: Layer
-  area: Point[]
+  selectionArea: Uint32Array
   refresh?: boolean
 }
 

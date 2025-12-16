@@ -84,6 +84,27 @@ class DrawManager {
     }
   }
 
+  getSelectedAreaCoords(): Uint32Array | null {
+    if (!this.selectionArea) return null
+
+    const mask = this.selectionArea
+    let count = 0
+
+    for (let i = 0; i < mask.length; i++) {
+      if (mask[i] === 1) count++
+    }
+
+    const result = new Uint32Array(count)
+    let ptr = 0
+    for (let i = 0; i < mask.length; i++) {
+      if (mask[i] === 1) {
+        result[ptr++] = i
+      }
+    }
+
+    return result
+  }
+
   moveSelection(dx: number, dy: number) {
     this.points = this.points.map((point) => {
       return {
