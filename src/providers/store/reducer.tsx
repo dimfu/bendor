@@ -235,16 +235,15 @@ const storeReducer = (state: State, action: Action): State => {
       const prevLayer = layers[layerIdx]
       const prevSelection = prevLayer.selection
 
-      const nextFilter =
-        pselection.filter ?? prevSelection.filter
+      const nextFilter = pselection.filter ?? prevSelection.filter
 
       const nextConfig =
         pselection.filter && pselection.filter !== prevSelection.filter
           ? defaultConfig(nextFilter)
           : {
-            ...prevSelection.config,
-            ...(pselection.config || {})
-          }
+              ...prevSelection.config,
+              ...(pselection.config || {})
+            }
 
       const nextSelection: LSelection = {
         ...prevSelection,

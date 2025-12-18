@@ -5,12 +5,15 @@ import { useLoading } from "~/hooks/useLoading"
 import { useStore } from "~/hooks/useStore"
 import { ExportImage } from "./exports/image"
 import { ExportGIF } from "./exports/gif"
+import { H5, Text } from "./reusables/typography"
+import styled from "styled-components"
+import { FlexEnd } from "~/styles/global"
 
 const EXPORT_TYPES = ["Image", "GIF"] as const
 
 const Exports = () => {
   const ffmpegRef = useRef(new FFmpeg())
-  const { loading, start, stop } = useLoading()
+  const { start, stop } = useLoading()
   const { state } = useStore()
   const [exportType, setExportType] = useState<(typeof EXPORT_TYPES)[number]>("Image")
 
@@ -29,19 +32,52 @@ const Exports = () => {
 
   if (!state.imgCtx) return <div></div>
 
+  const onChangeExportType = (type: (typeof EXPORT_TYPES)[number]) => {
+    setExportType(type)
+  }
+
   return (
-    <div>
-      <p>Export options</p>
-      <select onChange={(e) => setExportType(e.currentTarget.value as typeof exportType)} value={exportType} disabled={loading}>
-        {EXPORT_TYPES.map((t, idx) => (
-          <option key={idx} value={t}>
-            {t}
-          </option>
-        ))}
-      </select>
+    <Container>
+      <H5 style={{ marginBottom: "12px" }}>Export</H5>
+      <FlexEnd style={{ marginBottom: "12px" }}>
+        <Text variant="secondary" size="small">
+          Output Format
+        </Text>
+        <ExportOptionsContainer>
+          <Text
+            style={{ cursor: "pointer" }}
+            size="small"
+            variant={exportType === "Image" ? "primary" : "secondary"}
+            onClick={() => onChangeExportType("Image")}
+          >
+            Image
+          </Text>
+          <span>/</span>
+          <Text
+            style={{ cursor: "pointer" }}
+            size="small"
+            variant={exportType === "GIF" ? "primary" : "secondary"}
+            onClick={() => onChangeExportType("GIF")}
+          >
+            GIF
+          </Text>
+        </ExportOptionsContainer>
+      </FlexEnd>
       {exportType === "Image" ? <ExportImage /> : <ExportGIF ffmpegRef={ffmpegRef} />}
-    </div>
+    </Container>
   )
 }
+
+const Container = styled.div`
+  padding: 24px;
+  border-bottom: solid black 1px;
+  border-bottom-style: dashed;
+`
+
+const ExportOptionsContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0 12px;
+`
 
 export default Exports

@@ -1,22 +1,26 @@
-import { useRef } from "react"
-import "./App.css"
-import Selections from "./components/selections"
+import { Fragment, useRef } from "react"
 import { useStore } from "./hooks/useStore"
 import { StoreActionType } from "./providers/store/reducer"
 import Canvas from "./components/canvas"
 import { LoadingProvider } from "./providers/loading/loadingProvider"
-import FilterConfigurations from "./components/filterConfigurations"
-import Exports from "./components/exports"
 import { fileTypeFromBuffer } from "file-type"
+import styled from "styled-components"
+import { H1, Link, Paragraph } from "./components/reusables/typography"
+import LayerList from "./components/layerList"
+import { PushTop } from "./styles/global"
+import Button from "./components/reusables/buttons"
+import LayerSettings from "./components/layerSettings"
+import GlobalConfiguration from "./components/globalConfigurations"
+import Exports from "./components/exports"
 
 function App() {
-  const { dispatch } = useStore()
+  const { state, dispatch } = useStore()
   const imageRef = useRef<HTMLInputElement>(null)
 
   const onImageChange = async () => {
     dispatch({ type: StoreActionType.ClearLayers })
     const files = imageRef.current?.files
-    if (!files || files?.length == 0) {
+    if (!files || files?.length === 0) {
       return
     }
     const file = files[0]
@@ -40,39 +44,109 @@ function App() {
     reader.readAsArrayBuffer(file)
   }
 
-  const generateResult = () => {
-    dispatch({ type: StoreActionType.ResetImageCanvas })
-    dispatch({ type: StoreActionType.GenerateResult })
+  const onClickInputButton = () => {
+    imageRef.current?.click()
+  }
+
+  const hasImage = () => {
+    return state.imgBuf.byteLength > 0
+  }
+
+  const hasActiveLayer = () => {
+    return hasImage() && state.selectedLayerIdx !== -1
   }
 
   return (
     <LoadingProvider>
-      <input onChange={onImageChange} ref={imageRef} name="image" type="file" accept="image/*" />
-      <Selections />
-      <Canvas />
-      <div>
-        <button
-          onClick={() => {
-            dispatch({ type: StoreActionType.DoLayerAction, payload: "undo" })
-            generateResult()
-          }}
-        >
-          Undo
-        </button>
-        <button
-          onClick={() => {
-            dispatch({ type: StoreActionType.DoLayerAction, payload: "redo" })
-            generateResult()
-          }}
-        >
-          Redo
-        </button>
-        <button onClick={generateResult}>Generate</button>
-      </div>
-      <FilterConfigurations />
-      <Exports />
+      <Layout columns={hasActiveLayer() ? 2 : 1}>
+        <LeftColumn>
+          <LogoContainer>
+            <H1>bendor</H1>
+            <Paragraph variant="secondary">
+              Built as an open source project. Any contributions are welcome on{" "}
+              <Link href="https://github.com/acrobatstick/bendor" target="_blank">
+                GitHub.
+              </Link>
+            </Paragraph>
+          </LogoContainer>
+          <ImageInput onChange={onImageChange} ref={imageRef} name="image" type="file" accept="image/*" />
+          {hasImage() && (
+            <Fragment>
+              <LayerList />
+              <GlobalConfiguration />
+              <Exports />
+            </Fragment>
+          )}
+          <PushTop>
+            <div style={{ padding: "24px" }}>
+              <Button $full variant={hasImage() ? "outline" : "primary"} onClick={onClickInputButton} type="button">
+                {hasImage() ? "Change Image" : "Upload Image"}
+              </Button>
+            </div>
+          </PushTop>
+        </LeftColumn>
+        {hasActiveLayer() && (
+          <LeftColumn>
+            <LayerSettings />
+          </LeftColumn>
+        )}
+        <RightColumn>
+          <Canvas />
+        </RightColumn>
+      </Layout>
     </LoadingProvider>
   )
 }
+
+const Layout = styled.div<{ columns?: number }>`
+  display: grid;
+  grid-template-columns: ${({ columns = 1 }) => (columns === 2 ? "330px 250px 1fr" : "330px 1fr")};
+  min-height: 100vh;
+  width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  
+  @media (max-width: 1280px) {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+`
+
+const LeftColumn = styled.div`
+  top: 0;
+  left: 0;
+  position: sticky;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  border-right: solid black 1px;
+  border-right-style: dashed;
+  box-sizing: border-box;
+
+  height: 100vh;
+  max-height: 100vh;
+
+  @media (max-width: 1280px) {
+    height: auto;
+    max-width: auto;
+    position: relative;
+    height: auto;
+    max-height: fit-content;
+  }
+`
+
+const LogoContainer = styled.div`
+  border-bottom: solid black 1px;
+  border-bottom-style: dashed;
+  padding: 24px;
+`
+
+const ImageInput = styled.input`
+  display: none;
+`
+
+const RightColumn = styled.div`
+  padding: 16px;
+`
 
 export default App

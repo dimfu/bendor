@@ -3,6 +3,9 @@ import { useRef } from "react"
 import { useLoading } from "~/hooks/useLoading"
 import { useStore } from "~/hooks/useStore"
 import { generateFilename } from "~/utils/etc"
+import { Slider } from "../reusables/slider"
+import Button from "../reusables/buttons"
+import { FlexGap } from "~/styles/global"
 
 export const ExportImage = () => {
   const { state } = useStore()
@@ -59,10 +62,11 @@ export const ExportImage = () => {
   }
 
   return (
-    <div>
-      <label>Image Quality</label>
-      <input ref={imageQualitySliderRef} type="range" step={1} min={10} max={100} defaultValue={100} />
-      <button onClick={() => onExportImage(Number(imageQualitySliderRef.current))}>Export</button>
-    </div>
+    <FlexGap direction="col">
+      <Slider id="imageQuality" label="Quality" ref={imageQualitySliderRef} type="range" step={1} min={10} max={100} defaultValue={100} />
+      <Button $full type="button" onClick={() => onExportImage(Number(imageQualitySliderRef.current))}>
+        Export
+      </Button>
+    </FlexGap>
   )
 }

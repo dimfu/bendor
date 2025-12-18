@@ -16,6 +16,11 @@ import {
 import { StoreActionType } from "~/providers/store/reducer"
 import { useLoading } from "~/hooks/useLoading"
 import { flushSync } from "react-dom"
+import { Slider } from "./reusables/slider"
+import styled from "styled-components"
+import { Select } from "./reusables/select"
+import { Label } from "./reusables/typography"
+import Button from "./reusables/buttons"
 
 interface RangeInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string
@@ -63,22 +68,20 @@ const RangeInput = ({ label, id, min, max, configKey, defaultValue, refresh = fa
   }
 
   return (
-    <div>
-      <label htmlFor={id}>{label}</label>
-      <input
-        disabled={loading}
-        ref={inputRef}
-        onMouseUp={onApply}
-        onTouchEnd={onApply}
-        id={id}
-        type="range"
-        min={min}
-        max={max}
-        step={rest.step ?? 0.01}
-        defaultValue={defaultValue}
-        {...rest}
-      />
-    </div>
+    <Slider
+      label={label}
+      disabled={loading}
+      ref={inputRef}
+      onMouseUp={onApply}
+      onTouchEnd={onApply}
+      id={id}
+      type="range"
+      min={min}
+      max={max}
+      step={rest.step ?? 0.01}
+      defaultValue={defaultValue}
+      {...rest}
+    />
   )
 }
 
@@ -126,8 +129,9 @@ const ListSelection = <T, V = T>({
 
   return (
     <div>
-      <label htmlFor={id}>{label}</label>
-      <select
+      <Label htmlFor={id}>{label}</Label>
+      <Select
+        $full
         id={id}
         value={selectedIndex}
         onChange={onSelect}
@@ -138,11 +142,11 @@ const ListSelection = <T, V = T>({
         }}
       >
         {items.map((item, index) => (
-          <option key={index} value={index}>
+          <option key={`${item}-${index + 1}`} value={index}>
             {renderItem ? renderItem(item, index === selectedIndex) : String(item)}
           </option>
         ))}
-      </select>
+      </Select>
     </div>
   )
 }
@@ -171,11 +175,7 @@ const AsSoundConfig = () => {
   const currSelection = state.currentLayer?.selection as LSelection<Filter.AsSound>
   const conf = currSelection.config
 
-  return (
-    <div>
-      <RangeInput label="Blend Intensity" id="blendIntensity" min={min} max={max} configKey="blend" defaultValue={conf.blend} />
-    </div>
-  )
+  return <RangeInput label="Blend Intensity" id="blendIntensity" min={min} max={max} configKey="blend" defaultValue={conf.blend} />
 }
 
 const FractalPixelSortConfig = () => {
@@ -185,17 +185,11 @@ const FractalPixelSortConfig = () => {
   const conf = currSelection.config
 
   return (
-    <div>
-      <RangeInput
-        label="Distortion Intensity"
-        id="distortionIntensity"
-        min={min}
-        max={max}
-        configKey="intensity"
-        defaultValue={conf.intensity}
-        refresh
-      />
-      <button
+    <ColWithGaps>
+      <RangeInput label="Intensity" id="distortionIntensity" min={min} max={max} configKey="intensity" defaultValue={conf.intensity} refresh />
+      <Button
+        variant="outline"
+        type="button"
         onClick={() => {
           dispatch({ type: StoreActionType.ResetImageCanvas })
           dispatch({
@@ -204,9 +198,9 @@ const FractalPixelSortConfig = () => {
           })
         }}
       >
-        Refresh Patterns
-      </button>
-    </div>
+        Refresh Pattern
+      </Button>
+    </ColWithGaps>
   )
 }
 
@@ -216,7 +210,7 @@ const RGBShiftConfig = () => {
   const currSelection = state.currentLayer?.selection as LSelection<Filter.RGBShift>
   const conf = currSelection.config
   return (
-    <div>
+    <ColWithGaps>
       <ListSelection
         label="RGB Shift Effect"
         id="rgb-shift-effect"
@@ -226,7 +220,7 @@ const RGBShiftConfig = () => {
         getItemValue={(item) => item}
       />
       <RangeInput label="Intensity" id="rgbShiftIntensity" min={min} max={max} configKey="intensity" defaultValue={conf.intensity} refresh />
-    </div>
+    </ColWithGaps>
   )
 }
 
@@ -236,7 +230,7 @@ const PixelSortConfig = () => {
   const currSelection = state.currentLayer?.selection as LSelection<Filter.PixelSort>
   const conf = currSelection.config
   return (
-    <div>
+    <ColWithGaps>
       <ListSelection
         label="Sort Direction"
         id="pixelSortDirection"
@@ -247,7 +241,7 @@ const PixelSortConfig = () => {
         refresh
       />
       <RangeInput label="Intensity" id="pixelSortIntensity" min={min} max={max} configKey="intensity" defaultValue={conf.intensity} refresh />
-    </div>
+    </ColWithGaps>
   )
 }
 
@@ -266,7 +260,7 @@ const OffsetPixelSortConfig = () => {
   const currSelection = state.currentLayer?.selection as LSelection<Filter.OffsetPixelSort>
   const conf = currSelection.config
   return (
-    <div>
+    <ColWithGaps>
       <RangeInput
         label="Distortion"
         id="sliceDistortionIntensity"
@@ -277,7 +271,9 @@ const OffsetPixelSortConfig = () => {
         defaultValue={conf.intensity}
         refresh
       />
-      <button
+      <Button
+        variant="outline"
+        type="button"
         onClick={() => {
           dispatch({ type: StoreActionType.ResetImageCanvas })
           dispatch({
@@ -287,8 +283,8 @@ const OffsetPixelSortConfig = () => {
         }}
       >
         Refresh Patterns
-      </button>
-    </div>
+      </Button>
+    </ColWithGaps>
   )
 }
 
@@ -318,10 +314,20 @@ const ConfigElements = (filter?: Filter): JSX.Element => {
   }
 }
 
+const Container = styled.div`
+  margin-top: 24px;
+`
+
+const ColWithGaps = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`
+
 function FilterConfigurations() {
   const { state } = useStore()
   const filter = state.currentLayer?.selection.filter
-  return <div>{ConfigElements(filter)}</div>
+  return <Container>{ConfigElements(filter)}</Container>
 }
 
 export default FilterConfigurations

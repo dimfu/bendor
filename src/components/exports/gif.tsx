@@ -5,33 +5,12 @@ import { useLoading } from "~/hooks/useLoading"
 import { useStore } from "~/hooks/useStore"
 import { StoreActionType } from "~/providers/store/reducer"
 import { generateFilename } from "~/utils/etc"
+import Button from "../reusables/buttons"
+import { FlexGap } from "~/styles/global"
+import { Slider } from "../reusables/slider"
 
 interface IExportGIF {
   ffmpegRef: RefObject<FFmpeg>
-}
-
-interface RangeInputProps {
-  label: string
-  id: string
-  min: number
-  max: number
-  value: number
-  onChange: (value: number) => void
-  step?: number
-}
-const RangeInput = ({ label, id, min, max, value, onChange, step = 1 }: RangeInputProps) => {
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = Math.max(min, Math.min(Number(event.target.value), max))
-    onChange(newValue)
-  }
-
-  return (
-    <div>
-      <label htmlFor={id}>{label}</label>
-      <input type="number" id={id} min={min} max={max} step={step} value={value} onChange={handleChange} />
-      <input type="range" id={`${id}Slider`} min={min} max={max} step={step} value={value} onChange={handleChange} />
-    </div>
-  )
 }
 
 interface GIFOpts {
@@ -166,34 +145,36 @@ export const ExportGIF = ({ ffmpegRef }: IExportGIF) => {
   }
 
   return (
-    <div>
-      <RangeInput
+    <FlexGap direction="col">
+      <Slider
         label="GIF Frame Rate"
         id="framerate"
         min={5}
         max={30}
         value={exportOpts.framerate}
-        onChange={(value) => setExportOpts((prev) => ({ ...prev, framerate: value }))}
+        onChange={(evt) => setExportOpts((prev) => ({ ...prev, framerate: parseFloat(evt.target.value) }))}
       />
 
-      <RangeInput
+      <Slider
         label="Color Range"
         id="colorRange"
         min={80}
         max={256}
         value={exportOpts.colorRange}
-        onChange={(value) => setExportOpts((prev) => ({ ...prev, colorRange: value }))}
+        onChange={(evt) => setExportOpts((prev) => ({ ...prev, colorRange: parseFloat(evt.target.value) }))}
       />
 
-      <RangeInput
-        label="Compression Quality"
+      <Slider
+        label="Quality"
         id="compressionQuality"
         min={0}
         max={100}
         value={exportOpts.compressionQuality}
-        onChange={(value) => setExportOpts((prev) => ({ ...prev, compressionQuality: value }))}
+        onChange={(evt) => setExportOpts((prev) => ({ ...prev, compressionQuality: parseFloat(evt.target.value) }))}
       />
-      <button onClick={onExportGIF}>Export</button>
-    </div>
+      <Button $full onClick={onExportGIF}>
+        Export
+      </Button>
+    </FlexGap>
   )
 }
