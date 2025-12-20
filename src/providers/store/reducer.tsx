@@ -78,7 +78,8 @@ interface MoveLayer {
 interface GenerateResult {
   type: StoreActionType.GenerateResult
   payload?: {
-    refresh: boolean
+    // layer idx
+    refreshIdx: number
   }
 }
 
@@ -374,6 +375,7 @@ const storeReducer = (state: State, action: Action): State => {
 
       let layers = state.layers
       let didChange = false
+      let refreshNext = false
 
       for (let i = 0; i < state.layers.length; i++) {
         const layer = state.layers[i]
@@ -384,6 +386,9 @@ const storeReducer = (state: State, action: Action): State => {
         const filterFn = filterFnRegistry[filter]
         if (!filterFn) continue
 
+        // should refresh all layer next onwards
+        if (action.payload?.refreshIdx === i) refreshNext = true
+
         const { updatedSelection } = filterFn({
           imageCanvas,
           layer: {
@@ -391,7 +396,7 @@ const storeReducer = (state: State, action: Action): State => {
             selection: { ...layer.selection }
           },
           selectionArea,
-          refresh: action.payload?.refresh
+          refresh: refreshNext ?? action.payload?.refreshIdx === i
         })
 
         if (updatedSelection !== layer.selection) {

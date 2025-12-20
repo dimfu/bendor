@@ -103,7 +103,9 @@ export const ExportGIF = ({ ffmpegRef }: IExportGIF) => {
     // and iterate from there
     for (let i = 0; i < 11; i++) {
       dispatch({ type: StoreActionType.ResetImageCanvas })
-      dispatch({ type: StoreActionType.GenerateResult, payload: { refresh: true } })
+      // should refresh every layer since we want to make a gif. it supposed to give each
+      // frame a unique look
+      dispatch({ type: StoreActionType.GenerateResult, payload: { refreshIdx: i } })
       frames.push(await captureFrame())
     }
 

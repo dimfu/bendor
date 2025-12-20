@@ -63,7 +63,7 @@ const RangeInput = ({ label, id, min, max, configKey, defaultValue, refresh = fa
         withUpdateInitialPresent: false
       }
     })
-    dispatch({ type: StoreActionType.GenerateResult, payload: { refresh } })
+    dispatch({ type: StoreActionType.GenerateResult, payload: { refreshIdx: state.selectedLayerIdx } })
     stop()
   }
 
@@ -85,16 +85,7 @@ const RangeInput = ({ label, id, min, max, configKey, defaultValue, refresh = fa
   )
 }
 
-const ListSelection = <T, V = T>({
-  label,
-  id,
-  items,
-  configKey,
-  defaultValue,
-  refresh = false,
-  renderItem,
-  getItemValue
-}: ListSelectionProps<T, V>) => {
+const ListSelection = <T, V = T>({ label, id, items, configKey, defaultValue, renderItem, getItemValue }: ListSelectionProps<T, V>) => {
   const { loading, start, stop } = useLoading()
   const { state, dispatch } = useStore()
   const [selectedValue, setSelectedValue] = useState<T>(defaultValue)
@@ -117,7 +108,7 @@ const ListSelection = <T, V = T>({
         withUpdateInitialPresent: false
       }
     })
-    dispatch({ type: StoreActionType.GenerateResult, payload: { refresh } })
+    dispatch({ type: StoreActionType.GenerateResult, payload: { refreshIdx: state.selectedLayerIdx } })
     stop()
   }
 
@@ -194,7 +185,7 @@ const FractalPixelSortConfig = () => {
           dispatch({ type: StoreActionType.ResetImageCanvas })
           dispatch({
             type: StoreActionType.GenerateResult,
-            payload: { refresh: true }
+            payload: { refreshIdx: state.selectedLayerIdx }
           })
         }}
       >
@@ -278,7 +269,7 @@ const OffsetPixelSortConfig = () => {
           dispatch({ type: StoreActionType.ResetImageCanvas })
           dispatch({
             type: StoreActionType.GenerateResult,
-            payload: { refresh: true }
+            payload: { refreshIdx: state.selectedLayerIdx }
           })
         }}
       >
