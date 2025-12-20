@@ -1,4 +1,4 @@
-import { FFmpeg } from "@ffmpeg/ffmpeg"
+import { FFmpeg, type FileData } from "@ffmpeg/ffmpeg"
 import { useEffect, useRef, useState } from "react"
 import { useLoading } from "~/hooks/useLoading"
 import { useStore } from "~/hooks/useStore"
@@ -17,7 +17,7 @@ interface GIFOpts {
 
 const initialGIFOpts = {
   framerate: 15,
-  compressionQuality: 0,
+  compressionQuality: 100,
   colorRange: 80
 } as GIFOpts
 
@@ -29,6 +29,7 @@ const ExportGIF = () => {
   const { state, dispatch } = useStore()
   const { start, stop } = useLoading()
 
+  const [isExporting, setIsExporting] = useState(false)
   const [exportOpts, setExportOpts] = useState<GIFOpts>(initialGIFOpts)
 
   useEffect(() => {
@@ -103,6 +104,7 @@ const ExportGIF = () => {
     }
 
     start()
+    setIsExporting(true)
     if (!state.imgCtx) return
 
     const ffmpeg = ffmpegRef.current
@@ -111,64 +113,108 @@ const ExportGIF = () => {
       return
     }
 
-    const frames: Blob[] = []
-    const captureFrame = (): Promise<Blob> => {
-      return new Promise((resolve, reject) => {
-        state.imgCtx?.canvas.toBlob((blob) => {
-          if (blob) resolve(blob)
-          else reject(new Error("Failed to capture frame"))
+    try {
+      const frames: Blob[] = []
+      const captureFrame = (): Promise<Blob> => {
+        return new Promise((resolve, reject) => {
+          requestAnimationFrame(() => {
+            state.imgCtx?.canvas.toBlob((blob) => {
+              if (blob) resolve(blob)
+              else reject(new Error("Failed to capture frame"))
+            })
+          })
         })
-      })
-    }
+      }
 
-    // push the current image canvas result into the frames
-    frames.push(await captureFrame())
-    dispatch({ type: StoreActionType.ResetImageCanvas })
-    // and iterate from there
-    for (let i = 0; i < 11; i++) {
-      dispatch({ type: StoreActionType.ResetImageCanvas })
-      // should refresh every layer since we want to make a gif. it supposed to give each
-      // frame a unique look
-      dispatch({ type: StoreActionType.GenerateResult, payload: { refreshIdx: i } })
       frames.push(await captureFrame())
+      dispatch({ type: StoreActionType.ResetImageCanvas })
+      for (let i = 0; i < exportOpts.framerate - 1; i++) {
+        dispatch({ type: StoreActionType.ResetImageCanvas })
+        dispatch({ type: StoreActionType.GenerateResult, payload: { refreshIdx: -1 } })
+
+        try {
+          const frame = await captureFrame()
+          frames.push(frame)
+        } catch (error) {
+          console.error(`Error capturing frame ${i + 2}:`, error)
+          throw new Error(`Frame capture failed at frame ${i + 2}`)
+        }
+      }
+
+      console.info(`captured ${frames.length} frames total`)
+
+      if (frames.length !== exportOpts.framerate) {
+        throw new Error(`Expected ${exportOpts.framerate} frames but got ${frames.length}`)
+      }
+
+      try {
+        for (let i = 0; i < frames.length; i++) {
+          const arrayBuffer = await frames[i].arrayBuffer()
+          const filename = `frame${i.toString().padStart(3, "0")}.png`
+          await ffmpeg.writeFile(filename, new Uint8Array(arrayBuffer))
+        }
+      } catch (error) {
+        console.error("FFmpeg writeFile error:", error)
+        throw new Error(`FFmpeg write failed: ${error}`)
+      }
+
+      try {
+        await ffmpeg.exec([
+          "-framerate",
+          `${exportOpts.framerate}`,
+          "-i",
+          "frame%03d.png",
+          "-vf",
+          `split[s0][s1];[s0]palettegen=max_colors=${exportOpts.colorRange}[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5`,
+          "output.gif"
+        ])
+      } catch (error) {
+        console.error("FFmpeg exec error:", error)
+        throw new Error(`FFmpeg encoding failed: ${error}`)
+      }
+
+      let data: FileData
+      try {
+        data = await ffmpeg.readFile("output.gif")
+      } catch (error) {
+        console.error("FFmpeg readFile error:", error)
+        throw new Error(`FFmpeg read failed: ${error}`)
+      }
+
+      let blob = new Blob([data.slice(0)], { type: "image/gif" })
+      try {
+        blob = await compressGIF(blob)
+      } catch (error) {
+        console.error("Gifsicle compression error:", error)
+        console.warn("continuing with uncompressed GIF...")
+      }
+
+      const blobToBuffer = await blob.arrayBuffer()
+      const filename = await generateFilename(blobToBuffer)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${filename}.gif`
+      a.click()
+      URL.revokeObjectURL(url)
+
+      try {
+        for (let i = 0; i < frames.length; i++) {
+          await ffmpeg.deleteFile(`frame${i.toString().padStart(3, "0")}.png`)
+        }
+        await ffmpeg.deleteFile("output.gif")
+      } catch (error) {
+        console.warn("cleanup error (non-critical):", error)
+      }
+    } catch (error) {
+      console.error("GIF Export failed:", error)
+    } finally {
+      setIsExporting(false)
+      stop()
     }
-
-    for (let i = 0; i < frames.length; i++) {
-      const arrayBuffer = await frames[i].arrayBuffer()
-      await ffmpeg.writeFile(`frame${i.toString().padStart(3, "0")}.png`, new Uint8Array(arrayBuffer))
-    }
-
-    await ffmpeg.exec([
-      "-framerate",
-      `${exportOpts.framerate}`,
-      "-i",
-      "frame%03d.png",
-      "-vf",
-      `split[s0][s1];[s0]palettegen=max_colors=${exportOpts.colorRange}[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5`,
-      "output.gif"
-    ])
-
-    const data = await ffmpeg.readFile("output.gif")
-    let blob = new Blob([data.slice(0)], { type: "image/gif" })
-    blob = await compressGIF(blob)
-
-    const blobToBuffer = await blob.arrayBuffer()
-    const filename = await generateFilename(blobToBuffer)
-
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `${filename}.gif`
-    a.click()
-    URL.revokeObjectURL(url)
-    stop()
-
-    // cleanups
-    for (let i = 0; i < frames.length; i++) {
-      await ffmpeg.deleteFile(`frame${i.toString().padStart(3, "0")}.png`)
-    }
-    await ffmpeg.deleteFile("output.gif")
   }
+
+  const isButtonDisabled = !isLoadedRef.current || isExporting
 
   return (
     <FlexGap direction="col">
@@ -198,8 +244,8 @@ const ExportGIF = () => {
         value={exportOpts.compressionQuality}
         onChange={(evt) => setExportOpts((prev) => ({ ...prev, compressionQuality: parseFloat(evt.target.value) }))}
       />
-      <Button $full onClick={onExportGIF} disabled={!isLoadedRef.current}>
-        {isLoadedRef.current ? "Export" : "Loading..."}
+      <Button $full onClick={onExportGIF} disabled={isButtonDisabled} variant={isButtonDisabled ? "disabled" : "primary"}>
+        {!isLoadedRef.current ? "Loading..." : isExporting ? "Exporting..." : "Export"}
       </Button>
     </FlexGap>
   )

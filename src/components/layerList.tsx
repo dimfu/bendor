@@ -37,7 +37,7 @@ function LayerList() {
 
   const onRefresh = () => {
     dispatch({ type: StoreActionType.ResetImageCanvas })
-    dispatch({ type: StoreActionType.GenerateResult })
+    dispatch({ type: StoreActionType.GenerateResult, payload: { refreshIdx: 0 } })
   }
 
   return (

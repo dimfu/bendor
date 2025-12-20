@@ -377,6 +377,11 @@ const storeReducer = (state: State, action: Action): State => {
       let didChange = false
       let refreshNext = false
 
+      // when generating a gif it should refresh all layer to get different results
+      if (action.payload?.refreshIdx === -1) {
+        refreshNext = true
+      }
+
       for (let i = 0; i < state.layers.length; i++) {
         const layer = state.layers[i]
         const { filter, selectionArea } = layer.selection
