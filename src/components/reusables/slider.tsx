@@ -1,7 +1,7 @@
-import styled from "styled-components"
-import { Label } from "./typography"
 import { forwardRef, useEffect, useState } from "react"
+import styled from "styled-components"
 import { useLoading } from "~/hooks/useLoading"
+import { Label } from "./typography"
 
 interface SliderProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string

@@ -1,13 +1,13 @@
+import styled from "styled-components"
 import { useLoading } from "~/hooks/useLoading"
 import { useStore } from "~/hooks/useStore"
 import { StoreActionType } from "~/providers/store/reducer"
 import { Filter } from "~/types"
 import { filterNameRegistry } from "~/utils/filters/registry"
+import FilterConfigurations from "./filterConfigurations"
+import Button from "./reusables/buttons"
 import { Select } from "./reusables/select"
 import { H4, Label } from "./reusables/typography"
-import FilterConfigurations from "./filterConfigurations"
-import styled from "styled-components"
-import Button from "./reusables/buttons"
 
 const LayerSettings = () => {
   const {

@@ -1,13 +1,13 @@
 import { FFmpeg, type FileData } from "@ffmpeg/ffmpeg"
+import { toBlobURL } from "@ffmpeg/util"
 import { useEffect, useRef, useState } from "react"
 import { useLoading } from "~/hooks/useLoading"
 import { useStore } from "~/hooks/useStore"
 import { StoreActionType } from "~/providers/store/reducer"
+import { FlexGap } from "~/styles/global"
 import { generateFilename } from "~/utils/etc"
 import Button from "../reusables/buttons"
-import { FlexGap } from "~/styles/global"
 import { Slider } from "../reusables/slider"
-import { toBlobURL } from "@ffmpeg/util"
 
 interface GIFOpts {
   framerate: number

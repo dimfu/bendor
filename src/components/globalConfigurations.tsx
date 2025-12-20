@@ -1,9 +1,9 @@
 import styled from "styled-components"
-import { H5, Text } from "./reusables/typography"
-import Switch from "./reusables/switch"
-import { FlexEnd, FlexGap } from "~/styles/global"
 import { useStore } from "~/hooks/useStore"
 import { StoreActionType } from "~/providers/store/reducer"
+import { FlexEnd, FlexGap } from "~/styles/global"
+import Switch from "./reusables/switch"
+import { H5, Text } from "./reusables/typography"
 
 const GlobalConfiguration = () => {
   const { dispatch, state } = useStore()

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useLoading } from "~/hooks/useLoading"
 import { useStore } from "~/hooks/useStore"
 import { StoreActionType } from "~/providers/store/reducer"
-import { useLoading } from "~/hooks/useLoading"
-import { cursorInBoundingBox, getMouseCanvasCoordinates } from "~/utils/image"
 import DrawManager from "~/utils/drawManager"
+import { cursorInBoundingBox, getMouseCanvasCoordinates } from "~/utils/image"
 
 function Canvas(props: React.HTMLAttributes<HTMLDivElement>) {
   const { start, stop } = useLoading()

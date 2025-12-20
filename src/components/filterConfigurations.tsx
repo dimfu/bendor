@@ -1,6 +1,6 @@
-import { useRef, useState, type JSX } from "react"
-import { useStore } from "~/hooks/useStore"
-import { Filter, type LSelection } from "~/types"
+import { type JSX, useRef, useState } from "react"
+import { flushSync } from "react-dom"
+import styled from "styled-components"
 import {
   BRIGHTNESS_INTENSITY_RANGE,
   FRACTAL_SORT_DISTORTION_RANGE,
@@ -13,14 +13,14 @@ import {
   SLICE_INTENSITY_RANGE,
   SOUND_BIT_RATE_BLEND_RANGE
 } from "~/constants"
-import { StoreActionType } from "~/providers/store/reducer"
 import { useLoading } from "~/hooks/useLoading"
-import { flushSync } from "react-dom"
-import { Slider } from "./reusables/slider"
-import styled from "styled-components"
-import { Select } from "./reusables/select"
-import { Label } from "./reusables/typography"
+import { useStore } from "~/hooks/useStore"
+import { StoreActionType } from "~/providers/store/reducer"
+import { Filter, type LSelection } from "~/types"
 import Button from "./reusables/buttons"
+import { Select } from "./reusables/select"
+import { Slider } from "./reusables/slider"
+import { Label } from "./reusables/typography"
 
 interface RangeInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string
@@ -91,7 +91,7 @@ const ListSelection = <T, V = T>({ label, id, items, configKey, defaultValue, re
   const [selectedValue, setSelectedValue] = useState<T>(defaultValue)
 
   const onSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedIndex = parseInt(event.target.value)
+    const selectedIndex = parseInt(event.target.value, 10)
     const item = items[selectedIndex]
 
     flushSync(() => {

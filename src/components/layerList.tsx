@@ -1,11 +1,11 @@
+import styled from "styled-components"
 import { useLoading } from "~/hooks/useLoading"
 import { useStore } from "~/hooks/useStore"
 import { StoreActionType } from "~/providers/store/reducer"
+import { FlexEnd } from "~/styles/global"
+import { filterNameRegistry } from "~/utils/filters/registry"
 import Button from "./reusables/buttons"
 import { Label, Text } from "./reusables/typography"
-import styled from "styled-components"
-import { filterNameRegistry } from "~/utils/filters/registry"
-import { FlexEnd } from "~/styles/global"
 
 function LayerList() {
   const { loading, start, stop } = useLoading()

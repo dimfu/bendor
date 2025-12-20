@@ -45,7 +45,7 @@ export class Color {
     const g = this.green / 255.0
     const b = this.blue / 255.0
 
-    let max, min: number
+    let max: number, min: number
     max = r
     min = r
     if (g > max) {

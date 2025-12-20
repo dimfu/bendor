@@ -3,10 +3,10 @@ import { asSoundFilter } from "./asSound"
 import { brightnessFilter } from "./brightness"
 import { fractalPixelSortFilter } from "./fractalPixelSort"
 import { grayscaleFilter } from "./grayscale"
-import { rgbShift } from "./rgbShift"
-import { pixelSort } from "./pixelSort"
-import { slice } from "./slice"
 import { offsetPixelSort } from "./offsetPixelSort"
+import { pixelSort } from "./pixelSort"
+import { rgbShift } from "./rgbShift"
+import { slice } from "./slice"
 
 // a placeholder if filter is not yet implemented or just do nothing
 const noop: FilterFunction = ({ layer }) => {

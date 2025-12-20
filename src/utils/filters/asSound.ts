@@ -53,7 +53,10 @@ const generateSoundCache = (data: Uint8ClampedArray, selectionArea: Uint32Array,
       { value: rgb[0], range: DEFAULT_RGB_FREQUENCY_RANGES.r },
       { value: rgb[1], range: DEFAULT_RGB_FREQUENCY_RANGES.g },
       { value: rgb[2], range: DEFAULT_RGB_FREQUENCY_RANGES.b }
-    ]).forEach((value) => amps.push(value))
+    ]).forEach((value) => {
+      amps.push(value)
+      void null
+    })
 
     freqs.push(rgb[0], rgb[1], rgb[2])
   }

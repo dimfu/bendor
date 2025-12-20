@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react"
+import { type ReactNode, useState } from "react"
 import { LoadingContext } from "./loadingContext"
 
 export const LoadingProvider = ({ children }: { children: ReactNode }) => {

@@ -1,4 +1,4 @@
-import { useRef, type MouseEvent } from "react"
+import { type MouseEvent, useRef } from "react"
 import styled from "styled-components"
 
 interface SwitchProps extends React.InputHTMLAttributes<HTMLInputElement> {}

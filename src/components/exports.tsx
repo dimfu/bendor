@@ -1,9 +1,9 @@
 import { lazy, Suspense, useState } from "react"
+import styled from "styled-components"
 import { useStore } from "~/hooks/useStore"
+import { FlexEnd } from "~/styles/global"
 import { ExportImage } from "./exports/image"
 import { H5, Text } from "./reusables/typography"
-import styled from "styled-components"
-import { FlexEnd } from "~/styles/global"
 
 const EXPORT_TYPES = ["Image", "GIF"] as const
 

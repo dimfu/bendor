@@ -33,7 +33,6 @@ export const offsetPixelSort: FilterFunction = ({ layer, imageCanvas, selectionA
       const offsetRenderDist = randInt(-maxOffsetMarker, maxOffsetMarker)
 
       if (offsetRenderDist === 0) {
-        continue
       } else if (offsetRenderDist < 0) {
         // Negative offset: shift left with wrap
         const absOffset = -offsetRenderDist

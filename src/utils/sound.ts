@@ -39,8 +39,8 @@ const generateAsSineWave = (freqs: number[], amps: number[], duration: number, s
         (ampR * Math.sin(2 * Math.PI * freqR * time) + ampG * Math.sin(2 * Math.PI * freqG * time) + ampB * Math.sin(2 * Math.PI * freqB * time)) / 3
       audioSamples[sampleIndex++] = sample
     }
-    return audioSamples
   }
+  return audioSamples
 }
 
 export const applyAudioDistortions = (samples: Float32Array): Float32Array => {
@@ -50,7 +50,7 @@ export const applyAudioDistortions = (samples: Float32Array): Float32Array => {
     let sample = samples[i]
 
     const bitDepth = 4
-    const steps = Math.pow(2, bitDepth)
+    const steps = 2 ** bitDepth
     sample = Math.round(sample * steps) / steps
 
     if (Math.random() < 0.1) {

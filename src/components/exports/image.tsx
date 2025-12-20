@@ -2,10 +2,10 @@ import imageCompression, { type Options } from "browser-image-compression"
 import { useRef } from "react"
 import { useLoading } from "~/hooks/useLoading"
 import { useStore } from "~/hooks/useStore"
-import { generateFilename } from "~/utils/etc"
-import { Slider } from "../reusables/slider"
-import Button from "../reusables/buttons"
 import { FlexGap } from "~/styles/global"
+import { generateFilename } from "~/utils/etc"
+import Button from "../reusables/buttons"
+import { Slider } from "../reusables/slider"
 
 export const ExportImage = () => {
   const { state } = useStore()
