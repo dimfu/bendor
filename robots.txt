@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://acrobatstick.github.io/bendor/sitemap.xml
