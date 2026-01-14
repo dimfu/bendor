@@ -1,15 +1,15 @@
 import type { JSX } from "react"
 import {
-  BRIGHTNESS_INTENSITY_RANGE,
-  FRACTAL_SORT_DISTORTION_RANGE,
-  GRAYSCALE_INTENSITY_RANGE,
-  OFFSET_PIXEL_DISTORTION_RANGE,
+  BRIGHTNESS_INTENSITY_OPTS,
+  FRACTAL_SORT_DISTORTION_OPTS,
+  GRAYSCALE_INTENSITY_OPTS,
+  OFFSET_PIXEL_OPTS,
   PIXEL_SORT_DIRECTIONS,
-  PIXEL_SORT_INTENSITY,
-  RGB_SHIFT_INTENSITY_RANGE,
-  RGB_SHIFT_OPTIONS,
-  SLICE_INTENSITY_RANGE,
-  SOUND_BIT_RATE_BLEND_RANGE
+  PIXEL_SORT_OPTS,
+  RGB_SHIFT_OPTS,
+  RGB_SHIFT_TYPES,
+  SLICE_INTENSITY_OPTS,
+  SOUND_BIT_RATE_BLEND_OPTS
 } from "~/constants"
 import { useStore } from "~/hooks/useStore"
 import { StoreActionType } from "~/providers/store/reducer"
@@ -20,7 +20,7 @@ import { ColWithGaps, Container, ListSelection, RangeInput } from "./reusables"
 
 const GrayscaleConfig = () => {
   const { state } = useStore()
-  const { min, max } = GRAYSCALE_INTENSITY_RANGE
+  const { min, max } = GRAYSCALE_INTENSITY_OPTS
   const currSelection = state.currentLayer?.selection as LSelection<Filter.Grayscale>
   const conf = currSelection.config
 
@@ -29,7 +29,7 @@ const GrayscaleConfig = () => {
 
 const BrightnessConfig = () => {
   const { state } = useStore()
-  const { min, max } = BRIGHTNESS_INTENSITY_RANGE
+  const { min, max } = BRIGHTNESS_INTENSITY_OPTS
   const currSelection = state.currentLayer?.selection as LSelection<Filter.Brightness>
   const conf = currSelection.config
 
@@ -38,7 +38,7 @@ const BrightnessConfig = () => {
 
 const AsSoundConfig = () => {
   const { state } = useStore()
-  const { min, max } = SOUND_BIT_RATE_BLEND_RANGE
+  const { min, max } = SOUND_BIT_RATE_BLEND_OPTS
   const currSelection = state.currentLayer?.selection as LSelection<Filter.AsSound>
   const conf = currSelection.config
 
@@ -47,7 +47,7 @@ const AsSoundConfig = () => {
 
 const FractalPixelSortConfig = () => {
   const { state, dispatch } = useStore()
-  const { min, max } = FRACTAL_SORT_DISTORTION_RANGE
+  const { min, max } = FRACTAL_SORT_DISTORTION_OPTS
   const currSelection = state.currentLayer?.selection as LSelection<Filter.FractalPixelSort>
   const conf = currSelection.config
 
@@ -73,7 +73,7 @@ const FractalPixelSortConfig = () => {
 
 const RGBShiftConfig = () => {
   const { state } = useStore()
-  const { min, max } = RGB_SHIFT_INTENSITY_RANGE
+  const { min, max } = RGB_SHIFT_OPTS
   const currSelection = state.currentLayer?.selection as LSelection<Filter.RGBShift>
   const conf = currSelection.config
   return (
@@ -81,7 +81,7 @@ const RGBShiftConfig = () => {
       <ListSelection
         label="RGB Shift Effect"
         id="rgb-shift-effect"
-        items={RGB_SHIFT_OPTIONS}
+        items={RGB_SHIFT_TYPES}
         configKey="effect"
         defaultValue="Vibrance"
         getItemValue={(item) => item}
@@ -93,7 +93,7 @@ const RGBShiftConfig = () => {
 
 const PixelSortConfig = () => {
   const { state } = useStore()
-  const { min, max } = PIXEL_SORT_INTENSITY
+  const { min, max } = PIXEL_SORT_OPTS
   const currSelection = state.currentLayer?.selection as LSelection<Filter.PixelSort>
   const conf = currSelection.config
   return (
@@ -114,7 +114,7 @@ const PixelSortConfig = () => {
 
 const SliceConfig = () => {
   const { state } = useStore()
-  const { min, max } = SLICE_INTENSITY_RANGE
+  const { min, max } = SLICE_INTENSITY_OPTS
   const currSelection = state.currentLayer?.selection as LSelection<Filter.Slice>
   const conf = currSelection.config
 
@@ -123,7 +123,7 @@ const SliceConfig = () => {
 
 const OffsetPixelSortConfig = () => {
   const { state, dispatch } = useStore()
-  const distortion = OFFSET_PIXEL_DISTORTION_RANGE
+  const distortion = OFFSET_PIXEL_OPTS
   const currSelection = state.currentLayer?.selection as LSelection<Filter.OffsetPixelSort>
   const conf = currSelection.config
   return (

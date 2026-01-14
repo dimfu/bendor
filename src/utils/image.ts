@@ -61,3 +61,15 @@ export const adjustGrayscale = (data: ImageDataArray, selectionArea: Uint32Array
     data[index + 2] = blue * (1 - intensity) + avg * intensity
   }
 }
+
+export const adjustContrast = (data: ImageDataArray, selectionArea: Uint32Array<ArrayBufferLike>, intensity: number) => {
+  intensity *= 2.55
+  const factor = (255 + intensity) / (255.01 - intensity)
+  for (let i = 0; i < selectionArea.length; i++) {
+    const index = selectionArea[i] * 4
+    const { red, blue, green } = new Color(data.slice(index, index + 4))
+    data[index] = factor * (red - 128) + 128
+    data[index + 1] = factor * (green - 128) + 128
+    data[index + 2] = factor * (blue - 128) + 128
+  }
+}

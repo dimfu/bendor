@@ -13,7 +13,7 @@ interface RangeInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   id: string
   min: number
   max: number
-  configKey: "intensity" | "blend" | "brightness" | "distortion"
+  configKey: "intensity" | "blend" | "brightness" | "distortion" | "contrast"
   defaultValue: number
   refresh?: boolean
 }

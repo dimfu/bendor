@@ -1,5 +1,5 @@
 import type { Filter, FilterFunction, LSelection } from "~/types"
-import { adjustBrightness, adjustGrayscale, parseHexToRGB } from "../image"
+import { adjustBrightness, adjustContrast, adjustGrayscale, parseHexToRGB } from "../image"
 
 export const duotoneFilter: FilterFunction = ({ imageCanvas, layer, selectionArea }) => {
   const selection = layer.selection as LSelection<Filter.Duotone>
@@ -9,6 +9,7 @@ export const duotoneFilter: FilterFunction = ({ imageCanvas, layer, selectionAre
 
   adjustBrightness(data, selectionArea, selection.config.brightness)
   adjustGrayscale(data, selectionArea, 1)
+  adjustContrast(data, selectionArea, selection.config.contrast)
 
   // apply highlights tone with multiply blend
   const highlightColor = parseHexToRGB(selection.config.highlightsColor)

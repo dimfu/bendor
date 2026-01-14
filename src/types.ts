@@ -1,5 +1,5 @@
 import type { FileTypeResult } from "file-type"
-import type { PIXEL_SORT_DIRECTIONS, RGB_SHIFT_OPTIONS } from "./constants"
+import type { PIXEL_SORT_DIRECTIONS, RGB_SHIFT_TYPES } from "./constants"
 import type Commands from "./utils/commands"
 
 export type ColorValueHex = `#${string}`
@@ -42,7 +42,7 @@ interface FractalPixelSortConfig {
 }
 
 export interface RGBShiftConfig {
-  effect: (typeof RGB_SHIFT_OPTIONS)[number]
+  effect: (typeof RGB_SHIFT_TYPES)[number]
   intensity: number
 }
 

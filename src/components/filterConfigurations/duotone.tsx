@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react"
 import { HexColorInput, HexColorPicker } from "react-colorful"
 import styled from "styled-components"
-import { DUOTONE_CONFIG } from "~/constants"
+import { DUOTONE_OPTS } from "~/constants"
 import { useStore } from "~/hooks/useStore"
 import { StoreActionType } from "~/providers/store/reducer"
 import { FlexEnd } from "~/styles/global"
@@ -42,7 +42,7 @@ const DuotoneConfig = () => {
   // to persist custom preset
   const customColor = useRef<Preset>(null)
 
-  const { BRIGHTNESS_RANGE } = DUOTONE_CONFIG
+  const { BRIGHTNESS_RANGE, CONTRAST_RANGE } = DUOTONE_OPTS
   const currSelection = state.currentLayer?.selection as LSelection<Filter.Duotone>
   const conf = currSelection.config
 
@@ -154,6 +154,15 @@ const DuotoneConfig = () => {
         max={BRIGHTNESS_RANGE.max}
         configKey="brightness"
         defaultValue={conf.brightness}
+        refresh
+      />
+      <RangeInput
+        label="Contrast"
+        id="contrastIntensity"
+        min={CONTRAST_RANGE.min}
+        max={CONTRAST_RANGE.max}
+        configKey="contrast"
+        defaultValue={conf.contrast}
         refresh
       />
       <Label>Color Presets</Label>

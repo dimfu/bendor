@@ -1,3 +1,14 @@
+import {
+  BRIGHTNESS_INTENSITY_OPTS,
+  DUOTONE_OPTS,
+  FRACTAL_SORT_DISTORTION_OPTS,
+  GRAYSCALE_INTENSITY_OPTS,
+  OFFSET_PIXEL_OPTS,
+  PIXEL_SORT_OPTS,
+  RGB_SHIFT_OPTS,
+  SLICE_INTENSITY_OPTS,
+  SOUND_BIT_RATE_BLEND_OPTS
+} from "~/constants"
 import { Filter, type FilterConfigMap, type Layer, type LSelection, type State } from "~/types"
 import Commands from "~/utils/commands"
 import { generateRandomHex } from "~/utils/etc"
@@ -125,16 +136,24 @@ export type Action =
 const defaultConfig = <F extends Filter>(filter: F): FilterConfigMap[F] => {
   const configs = {
     [Filter.None]: { _empty: true },
-    [Filter.AsSound]: { blend: 0.5, cache: new Uint8ClampedArray() },
-    [Filter.FractalPixelSort]: { intensity: 6.0, cache: new Uint8ClampedArray() },
-    [Filter.Brightness]: { intensity: 1.0 },
-    [Filter.RGBShift]: { intensity: 5.0, effect: "Vibrance" },
-    [Filter.Grayscale]: { intensity: 1.0 },
-    [Filter.PixelSort]: { cache: new Uint8ClampedArray(), intensity: 1.0, direction: "Vertical" },
-    [Filter.Slice]: { intensity: -100.0 },
-    [Filter.OffsetPixelSort]: { intensity: 1, cache: new Uint8ClampedArray() },
-    // TODO: change color using available presets
-    [Filter.Duotone]: { brightness: 1.0, contrast: 1.0, highlightsColor: "#ffefb3", shadowsColor: "#290900" }
+    [Filter.AsSound]: { blend: SOUND_BIT_RATE_BLEND_OPTS.default, cache: new Uint8ClampedArray() },
+    [Filter.FractalPixelSort]: { intensity: FRACTAL_SORT_DISTORTION_OPTS.default, cache: new Uint8ClampedArray() },
+    [Filter.Brightness]: { intensity: BRIGHTNESS_INTENSITY_OPTS.default },
+    [Filter.RGBShift]: { intensity: RGB_SHIFT_OPTS.default.intensity, effect: RGB_SHIFT_OPTS.default.option },
+    [Filter.Grayscale]: { intensity: GRAYSCALE_INTENSITY_OPTS.default },
+    [Filter.PixelSort]: {
+      cache: new Uint8ClampedArray(),
+      intensity: PIXEL_SORT_OPTS.default.intensity,
+      direction: PIXEL_SORT_OPTS.default.direction
+    },
+    [Filter.Slice]: { intensity: SLICE_INTENSITY_OPTS.default },
+    [Filter.OffsetPixelSort]: { intensity: OFFSET_PIXEL_OPTS.default, cache: new Uint8ClampedArray() },
+    [Filter.Duotone]: {
+      brightness: DUOTONE_OPTS.BRIGHTNESS_RANGE.default,
+      contrast: DUOTONE_OPTS.CONTRAST_RANGE.default,
+      highlightsColor: "#ffefb3",
+      shadowsColor: "#290900"
+    }
   } satisfies FilterConfigMap
 
   return configs[filter]
